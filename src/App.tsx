@@ -4,16 +4,34 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 import LoginPage from "./pages/Login";
 import DashboardPage from "./pages/Dashboard";
 import NewIntakePage from "./pages/NewIntake";
 import IntakeDetailPage from "./pages/IntakeDetail";
+import ArchitectQueuePage from "./pages/ArchitectQueue";
+import AuditLogPage from "./pages/AuditLog";
+import PoliciesPage from "./pages/admin/Policies";
+import IntegrationsPage from "./pages/admin/Integrations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+  
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -21,7 +39,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
   
   return (
     <Routes>
@@ -30,10 +52,10 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/intake/new" element={<ProtectedRoute><NewIntakePage /></ProtectedRoute>} />
       <Route path="/intake/:id" element={<ProtectedRoute><IntakeDetailPage /></ProtectedRoute>} />
-      <Route path="/architect" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/audit" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/admin/policies" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/admin/integrations" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/architect" element={<ProtectedRoute><ArchitectQueuePage /></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
+      <Route path="/admin/policies" element={<ProtectedRoute><PoliciesPage /></ProtectedRoute>} />
+      <Route path="/admin/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
