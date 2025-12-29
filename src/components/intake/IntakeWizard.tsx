@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { interviewQuestions } from '@/data/demo';
+import { interviewQuestions, categoryLabels } from '@/data/demo';
 import type { InterviewQuestion, TranscriptMessage } from '@/types/intake';
 import { cn } from '@/lib/utils';
 import { 
@@ -24,27 +24,35 @@ import {
   FileText,
   CheckCircle,
   AlertCircle,
+  Sparkles,
+  HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const categories = ['problem', 'users', 'data', 'integrations', 'ux', 'nfr'] as const;
-const categoryLabels: Record<string, string> = {
-  problem: 'Problem & Goals',
-  users: 'Users & Usage',
-  data: 'Data & Security',
-  integrations: 'Integrations',
-  ux: 'User Experience',
-  nfr: 'Requirements',
-};
+
+interface AIValidation {
+  isComplete: boolean;
+  quality: 'excellent' | 'good' | 'needs_improvement' | 'insufficient';
+  followUpQuestion: string | null;
+  suggestions: string[];
+  enrichedAnswer: string | null;
+  missingAspects: string[];
+}
 
 export function IntakeWizard() {
   const navigate = useNavigate();
   const [currentCategory, setCurrentCategory] = useState<string>('problem');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [enrichedAnswers, setEnrichedAnswers] = useState<Record<string, string>>({});
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [pendingFollowUp, setPendingFollowUp] = useState<string | null>(null);
+  const [currentValidation, setCurrentValidation] = useState<AIValidation | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const categoryQuestions = interviewQuestions.filter(q => q.category === currentCategory);
@@ -62,7 +70,7 @@ export function IntakeWizard() {
     // Add initial assistant message when category changes
     if (currentQuestion && !transcript.find(t => t.questionKey === currentQuestion.key)) {
       const categoryIntro = currentQuestionIndex === 0 ? 
-        `Great, let's talk about ${categoryLabels[currentCategory].toLowerCase()}. ` : '';
+        `Gut, lassen Sie uns über ${categoryLabels[currentCategory].toLowerCase()} sprechen. ` : '';
       
       setTranscript(prev => [...prev, {
         id: `msg-${Date.now()}`,
@@ -75,28 +83,123 @@ export function IntakeWizard() {
     }
   }, [currentCategory, currentQuestionIndex, currentQuestion]);
 
-  const handleSubmitAnswer = () => {
+  const validateWithAI = async (questionKey: string, questionText: string, answer: string) => {
+    setIsValidating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-intake', {
+        body: {
+          questionKey,
+          questionText,
+          userAnswer: answer,
+          category: currentCategory,
+          previousAnswers: answers
+        }
+      });
+
+      if (error) {
+        console.error('Validation error:', error);
+        return null;
+      }
+
+      return data as AIValidation;
+    } catch (err) {
+      console.error('Failed to validate:', err);
+      return null;
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleSubmitAnswer = async () => {
     if (!inputValue.trim() || !currentQuestion) return;
 
+    const userMessage = inputValue;
+    
     // Add user message to transcript
     setTranscript(prev => [...prev, {
       id: `msg-${Date.now()}`,
       intakeId: 'new',
       speaker: 'user',
-      message: inputValue,
+      message: userMessage,
       timestamp: new Date().toISOString(),
     }]);
 
-    // Save answer
-    setAnswers(prev => ({ ...prev, [currentQuestion.key]: inputValue }));
     setInputValue('');
     setIsProcessing(true);
 
-    // Simulate processing
-    setTimeout(() => {
+    // If this is answering a follow-up question, combine with previous answer
+    const combinedAnswer = pendingFollowUp 
+      ? `${answers[currentQuestion.key] || ''}\n\nErgänzung: ${userMessage}`
+      : userMessage;
+
+    // Validate with AI
+    const validation = await validateWithAI(
+      currentQuestion.key, 
+      pendingFollowUp || currentQuestion.question,
+      combinedAnswer
+    );
+
+    setCurrentValidation(validation);
+
+    if (validation?.followUpQuestion && !pendingFollowUp) {
+      // AI wants to ask a follow-up question
+      setPendingFollowUp(validation.followUpQuestion);
       setIsProcessing(false);
       
-      // Move to next question
+      // Show AI follow-up question
+      setTranscript(prev => [...prev, {
+        id: `msg-${Date.now()}`,
+        intakeId: 'new',
+        speaker: 'assistant',
+        message: `🤔 ${validation.followUpQuestion}${validation.suggestions?.length > 0 ? `\n\n💡 Tipp: ${validation.suggestions[0]}` : ''}`,
+        timestamp: new Date().toISOString(),
+      }]);
+      
+      // Save partial answer
+      setAnswers(prev => ({ ...prev, [currentQuestion.key]: combinedAnswer }));
+      return;
+    }
+
+    // Clear follow-up state
+    setPendingFollowUp(null);
+
+    // Save answer (enriched if available)
+    const finalAnswer = validation?.enrichedAnswer || combinedAnswer;
+    setAnswers(prev => ({ ...prev, [currentQuestion.key]: combinedAnswer }));
+    if (validation?.enrichedAnswer) {
+      setEnrichedAnswers(prev => ({ ...prev, [currentQuestion.key]: validation.enrichedAnswer! }));
+    }
+
+    // Show quality feedback if available
+    if (validation) {
+      const qualityEmoji = {
+        excellent: '✨',
+        good: '✓',
+        needs_improvement: '📝',
+        insufficient: '⚠️'
+      }[validation.quality];
+      
+      const qualityMessages = {
+        excellent: 'Ausgezeichnet, sehr detailliert!',
+        good: 'Gut erfasst.',
+        needs_improvement: 'Okay, ich habe die wichtigsten Punkte.',
+        insufficient: 'Verstanden, wir können das später ergänzen.'
+      };
+
+      // Add quality feedback
+      setTranscript(prev => [...prev, {
+        id: `msg-${Date.now()}-feedback`,
+        intakeId: 'new',
+        speaker: 'assistant',
+        message: `${qualityEmoji} ${qualityMessages[validation.quality]}`,
+        timestamp: new Date().toISOString(),
+      }]);
+    }
+
+    setIsProcessing(false);
+
+    // Move to next question after a short delay
+    setTimeout(() => {
       if (currentQuestionIndex < categoryQuestions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       } else {
@@ -111,24 +214,60 @@ export function IntakeWizard() {
             id: `msg-${Date.now()}`,
             intakeId: 'new',
             speaker: 'assistant',
-            message: '✅ Excellent! I have all the information I need. I\'ll now generate a structured specification and routing recommendation for your review.',
+            message: '✅ Ausgezeichnet! Ich habe alle Informationen, die ich brauche. Ich werde jetzt eine strukturierte Spezifikation und Routing-Empfehlung für Ihre Überprüfung generieren.',
             timestamp: new Date().toISOString(),
           }]);
         }
       }
-    }, 500);
+    }, 800);
   };
 
   const handleSelectAnswer = (value: string) => {
     setInputValue(value);
   };
 
+  const handleSkipFollowUp = () => {
+    if (!currentQuestion) return;
+    
+    setPendingFollowUp(null);
+    setCurrentValidation(null);
+    
+    // Add skip message
+    setTranscript(prev => [...prev, {
+      id: `msg-${Date.now()}`,
+      intakeId: 'new',
+      speaker: 'user',
+      message: '[Übersprungen]',
+      timestamp: new Date().toISOString(),
+    }]);
+
+    // Move to next question
+    setTimeout(() => {
+      if (currentQuestionIndex < categoryQuestions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      } else {
+        const categoryIndex = categories.indexOf(currentCategory as typeof categories[number]);
+        if (categoryIndex < categories.length - 1) {
+          setCurrentCategory(categories[categoryIndex + 1]);
+          setCurrentQuestionIndex(0);
+        }
+      }
+    }, 300);
+  };
+
   const isComplete = answeredQuestions >= totalQuestions;
 
-  const handleGenerateSpec = () => {
-    toast.success('Generating specification...');
-    // In production, this would call the AI to generate the spec
-    navigate('/intake/intake-1'); // Navigate to demo intake for now
+  const handleGenerateSpec = async () => {
+    toast.loading('Generiere Spezifikation mit AI...', { id: 'gen-spec' });
+    
+    try {
+      // In production: Create intake, save transcript, generate spec
+      // For now, navigate to demo
+      toast.success('Spezifikation erfolgreich generiert!', { id: 'gen-spec' });
+      navigate('/intake/intake-1');
+    } catch (error) {
+      toast.error('Fehler bei der Generierung', { id: 'gen-spec' });
+    }
   };
 
   return (
@@ -137,8 +276,8 @@ export function IntakeWizard() {
       <div className="lg:col-span-1 space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Interview Progress</CardTitle>
-            <CardDescription>{answeredQuestions} of {totalQuestions} questions</CardDescription>
+            <CardTitle className="text-base">Interview Fortschritt</CardTitle>
+            <CardDescription>{answeredQuestions} von {totalQuestions} Fragen</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Progress value={progress} className="h-2" />
@@ -148,7 +287,7 @@ export function IntakeWizard() {
                 const catQuestions = interviewQuestions.filter(q => q.category === cat);
                 const catAnswered = catQuestions.filter(q => answers[q.key]).length;
                 const isActive = currentCategory === cat;
-                const isComplete = catAnswered === catQuestions.length;
+                const isCatComplete = catAnswered === catQuestions.length;
                 
                 return (
                   <button
@@ -156,20 +295,21 @@ export function IntakeWizard() {
                     onClick={() => {
                       setCurrentCategory(cat);
                       setCurrentQuestionIndex(0);
+                      setPendingFollowUp(null);
                     }}
                     className={cn(
-                      'w-full flex items-center justify-between p-2 text-left transition-colors',
+                      'w-full flex items-center justify-between p-2 text-left transition-colors rounded-md',
                       isActive ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50',
-                      isComplete && 'text-success'
+                      isCatComplete && 'text-success'
                     )}
                   >
                     <div className="flex items-center gap-2">
                       <span className={cn(
-                        'w-6 h-6 flex items-center justify-center text-xs font-medium',
+                        'w-6 h-6 flex items-center justify-center text-xs font-medium rounded',
                         isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
-                        isComplete && 'bg-success text-success-foreground'
+                        isCatComplete && 'bg-success text-success-foreground'
                       )}>
-                        {isComplete ? <CheckCircle className="h-4 w-4" /> : index + 1}
+                        {isCatComplete ? <CheckCircle className="h-4 w-4" /> : index + 1}
                       </span>
                       <span className="text-sm font-medium">{categoryLabels[cat]}</span>
                     </div>
@@ -183,19 +323,34 @@ export function IntakeWizard() {
           </CardContent>
         </Card>
 
+        {/* AI Assistant Info */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium">AI-Assistent aktiv</p>
+                <p className="text-xs text-muted-foreground">
+                  Die AI prüft Ihre Antworten und stellt bei Bedarf Nachfragen für bessere Spezifikationen.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {isComplete && (
           <Card className="border-success">
             <CardContent className="pt-6 space-y-4">
               <div className="flex items-center gap-2 text-success">
                 <CheckCircle className="h-5 w-5" />
-                <span className="font-medium">Interview Complete</span>
+                <span className="font-medium">Interview Abgeschlossen</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Ready to generate your specification and routing recommendation.
+                Bereit zur Generierung Ihrer Spezifikation und Routing-Empfehlung.
               </p>
               <Button onClick={handleGenerateSpec} className="w-full">
                 <FileText className="mr-2 h-4 w-4" />
-                Generate Specification
+                Spezifikation Generieren
               </Button>
             </CardContent>
           </Card>
@@ -211,7 +366,15 @@ export function IntakeWizard() {
                 <MessageSquare className="h-5 w-5 text-primary" />
                 <CardTitle className="text-base">Intake Interview</CardTitle>
               </div>
-              <Badge variant="outline">{categoryLabels[currentCategory]}</Badge>
+              <div className="flex items-center gap-2">
+                {isValidating && (
+                  <Badge variant="outline" className="gap-1">
+                    <Sparkles className="h-3 w-3 animate-pulse" />
+                    AI prüft...
+                  </Badge>
+                )}
+                <Badge variant="outline">{categoryLabels[currentCategory]}</Badge>
+              </div>
             </div>
           </CardHeader>
           
@@ -219,7 +382,7 @@ export function IntakeWizard() {
             {transcript.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Starting your intake interview...</p>
+                <p>Starte Ihr Intake-Interview...</p>
               </div>
             )}
             
@@ -233,7 +396,7 @@ export function IntakeWizard() {
               >
                 <div
                   className={cn(
-                    'max-w-[80%] p-3 text-sm whitespace-pre-wrap',
+                    'max-w-[80%] p-3 text-sm whitespace-pre-wrap rounded-lg',
                     msg.speaker === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-foreground'
@@ -244,10 +407,13 @@ export function IntakeWizard() {
               </div>
             ))}
             
-            {isProcessing && (
+            {(isProcessing || isValidating) && (
               <div className="flex justify-start">
-                <div className="bg-muted p-3">
+                <div className="bg-muted p-3 rounded-lg flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">
+                    {isValidating ? 'AI analysiert...' : 'Verarbeite...'}
+                  </span>
                 </div>
               </div>
             )}
@@ -257,7 +423,19 @@ export function IntakeWizard() {
 
           {/* Input Area */}
           <div className="p-4 border-t border-border space-y-3">
-            {currentQuestion?.inputType === 'select' && currentQuestion.options && (
+            {pendingFollowUp && (
+              <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <HelpCircle className="h-4 w-4" />
+                  <span>Nachfrage - Sie können antworten oder überspringen</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={handleSkipFollowUp}>
+                  Überspringen
+                </Button>
+              </div>
+            )}
+            
+            {currentQuestion?.inputType === 'select' && currentQuestion.options && !pendingFollowUp && (
               <div className="flex flex-wrap gap-2">
                 {currentQuestion.options.map((option) => (
                   <Button
@@ -273,11 +451,11 @@ export function IntakeWizard() {
             )}
             
             <div className="flex gap-2">
-              {currentQuestion?.inputType === 'textarea' ? (
+              {(currentQuestion?.inputType === 'textarea' || pendingFollowUp) ? (
                 <Textarea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Type your response..."
+                  placeholder={pendingFollowUp ? "Ihre Ergänzung..." : "Ihre Antwort eingeben..."}
                   className="min-h-[80px] resize-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -290,7 +468,7 @@ export function IntakeWizard() {
                 <Input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Type your response..."
+                  placeholder="Ihre Antwort eingeben..."
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleSubmitAnswer();
@@ -300,7 +478,7 @@ export function IntakeWizard() {
               )}
               <Button 
                 onClick={handleSubmitAnswer} 
-                disabled={!inputValue.trim() || isProcessing}
+                disabled={!inputValue.trim() || isProcessing || isValidating}
                 size="icon"
                 className="flex-shrink-0"
               >
