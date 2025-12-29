@@ -106,6 +106,73 @@ export function useRoutingScore(intakeId: string | undefined) {
   });
 }
 
+export function useCreateIntake() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ title, valueStream, category }: { 
+      title: string; 
+      valueStream?: string; 
+      category?: string;
+    }) => {
+      if (!user) throw new Error('User must be logged in');
+      
+      const { data, error } = await supabase
+        .from('intakes')
+        .insert({
+          title,
+          requester_id: user.id,
+          value_stream: valueStream || null,
+          category: category || null,
+          status: 'gathering_info',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Intake;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['intakes'] });
+    },
+  });
+}
+
+export function useSaveTranscript() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ intakeId, messages }: { 
+      intakeId: string; 
+      messages: Array<{
+        speaker: string;
+        message: string;
+        questionKey?: string;
+        timestamp: string;
+      }>;
+    }) => {
+      const transcriptRows = messages.map(msg => ({
+        intake_id: intakeId,
+        speaker: msg.speaker,
+        message: msg.message,
+        question_key: msg.questionKey || null,
+        timestamp: msg.timestamp,
+      }));
+
+      const { error } = await supabase
+        .from('transcripts')
+        .insert(transcriptRows);
+
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: (_, { intakeId }) => {
+      queryClient.invalidateQueries({ queryKey: ['transcript', intakeId] });
+    },
+  });
+}
+
 export function useGenerateSpec() {
   const queryClient = useQueryClient();
 
@@ -132,12 +199,62 @@ export function useExportToJira() {
 
   return useMutation({
     mutationFn: async (intakeId: string) => {
+      // First fetch the spec and routing data
+      const { data: spec } = await supabase
+        .from('spec_documents')
+        .select('structured_json')
+        .eq('intake_id', intakeId)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { data: routing } = await supabase
+        .from('routing_scores')
+        .select('*')
+        .eq('intake_id', intakeId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!spec) throw new Error('No specification found for this intake');
+      
+      const specJson = spec.structured_json as any;
+      
       const { data, error } = await supabase.functions.invoke('jira-export', {
-        body: { intakeId },
+        body: { 
+          intakeId,
+          spec: {
+            problemStatement: specJson.problemStatement || '',
+            goals: specJson.goals || [],
+            users: specJson.users || [],
+            acceptanceCriteria: specJson.acceptanceCriteria || [],
+            risks: specJson.risks || [],
+            nfrs: specJson.nfrs || {},
+          },
+          routing: routing ? {
+            path: routing.path,
+            score: routing.score,
+            explanation: routing.explanation_markdown || '',
+          } : {
+            path: 'PRODUCT_GRADE',
+            score: 50,
+            explanation: 'Default routing',
+          },
+          projectKeys: {
+            softwareProject: 'INTAKE', // Default project key
+          },
+        },
       });
 
       if (error) throw error;
       if (data.error) throw new Error(data.error);
+      
+      // Update intake status to exported
+      await supabase
+        .from('intakes')
+        .update({ status: 'exported' })
+        .eq('id', intakeId);
+      
       return data;
     },
     onSuccess: (_, intakeId) => {
