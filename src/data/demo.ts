@@ -291,6 +291,15 @@ Based on the analysis of your requirements, we recommend a **low-code platform a
 3. Proof of concept for offline scanning`,
 };
 
+export const categoryLabels: Record<string, string> = {
+  problem: 'Problem & Ziele',
+  users: 'Benutzer & Nutzung',
+  data: 'Daten & Sicherheit',
+  integrations: 'Integrationen',
+  ux: 'Benutzeroberfläche',
+  nfr: 'Anforderungen',
+};
+
 export const interviewQuestions: InterviewQuestion[] = [
   {
     key: 'problem_statement',
