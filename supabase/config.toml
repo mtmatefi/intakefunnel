@@ -1,1 +1,4 @@
 project_id = "rvtjphlhppxplemcxefo"
+
+[functions.jira-export]
+verify_jwt = true
