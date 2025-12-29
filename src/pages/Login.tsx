@@ -5,27 +5,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const { error } = await login(email, password);
+      if (error) {
+        if (error.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password');
+        } else {
+          toast.error(error);
+        }
+      } else {
         toast.success('Welcome back!');
         navigate('/dashboard');
-      } else {
-        toast.error('Invalid credentials');
       }
     } catch (error) {
       toast.error('Login failed. Please try again.');
@@ -34,19 +45,34 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = async (role: 'requester' | 'architect' | 'admin') => {
-    const emails: Record<string, string> = {
-      requester: 'maria.meier@example.com',
-      architect: 'thomas.architect@example.com',
-      admin: 'admin@example.com',
-    };
-    setEmail(emails[role]);
-    setIsLoading(true);
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || !displayName) {
+      toast.error('Please fill in all fields');
+      return;
+    }
     
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
+    setIsLoading(true);
+
     try {
-      await login(emails[role], 'demo');
-      toast.success(`Logged in as ${role}`);
-      navigate('/dashboard');
+      const { error } = await signup(email, password, displayName);
+      if (error) {
+        if (error.includes('already registered')) {
+          toast.error('An account with this email already exists');
+        } else {
+          toast.error(error);
+        }
+      } else {
+        toast.success('Account created! Logging you in...');
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      toast.error('Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -66,88 +92,99 @@ export default function LoginPage() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sign in</CardTitle>
-            <CardDescription>Enter your credentials to access the platform</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign in
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Demo Access</CardTitle>
-            <CardDescription>Try the app with different roles</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => handleDemoLogin('requester')}
-              disabled={isLoading}
-            >
-              <span className="bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium mr-2">
-                Requester
-              </span>
-              Frau Maria Meier (Business User)
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => handleDemoLogin('architect')}
-              disabled={isLoading}
-            >
-              <span className="bg-primary text-primary-foreground px-2 py-0.5 text-xs font-medium mr-2">
-                Architect
-              </span>
-              Thomas Weber (Enterprise Architect)
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => handleDemoLogin('admin')}
-              disabled={isLoading}
-            >
-              <span className="bg-primary text-primary-foreground px-2 py-0.5 text-xs font-medium mr-2">
-                Admin
-              </span>
-              System Administrator
-            </Button>
-          </CardContent>
+          <Tabs defaultValue="login">
+            <CardHeader className="pb-0">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+            </CardHeader>
+            
+            <TabsContent value="login">
+              <CardContent className="pt-6">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="you@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign in
+                  </Button>
+                </form>
+              </CardContent>
+            </TabsContent>
+            
+            <TabsContent value="signup">
+              <CardContent className="pt-6">
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Display Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="Maria Meier"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="you@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <p className="text-xs text-muted-foreground">At least 6 characters</p>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create Account
+                  </Button>
+                </form>
+              </CardContent>
+            </TabsContent>
+          </Tabs>
         </Card>
 
         <p className="text-center text-xs text-muted-foreground">
-          In production, this will use Supabase Auth.
+          New users are assigned the Requester role by default.
           <br />
-          Demo mode uses local authentication.
+          Contact an admin to be promoted to Architect or Admin.
         </p>
       </div>
     </div>
