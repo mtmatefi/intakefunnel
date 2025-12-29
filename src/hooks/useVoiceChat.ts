@@ -47,15 +47,19 @@ declare global {
 interface UseVoiceChatOptions {
   language: 'de' | 'en';
   onTranscript: (text: string) => void;
+  onInterimTranscript?: (text: string) => void;
   onSpeakingChange?: (speaking: boolean) => void;
+  autoListenAfterSpeak?: boolean;
 }
 
-export function useVoiceChat({ language, onTranscript, onSpeakingChange }: UseVoiceChatOptions) {
+export function useVoiceChat({ language, onTranscript, onInterimTranscript, onSpeakingChange, autoListenAfterSpeak = false }: UseVoiceChatOptions) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
+  const [interimText, setInterimText] = useState('');
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const shouldAutoListenRef = useRef(false);
 
   useEffect(() => {
     // Check browser support
@@ -84,7 +88,13 @@ export function useVoiceChat({ language, onTranscript, onSpeakingChange }: UseVo
         }
       }
 
+      // Update interim text for live display
+      setInterimText(interimTranscript);
+      onInterimTranscript?.(interimTranscript);
+
       if (finalTranscript) {
+        setInterimText('');
+        onInterimTranscript?.('');
         onTranscript(finalTranscript);
       }
     };
@@ -169,6 +179,15 @@ export function useVoiceChat({ language, onTranscript, onSpeakingChange }: UseVo
     utterance.onend = () => {
       setIsSpeaking(false);
       onSpeakingChange?.(false);
+      // Auto-start listening after speaking if enabled
+      if (autoListenAfterSpeak && shouldAutoListenRef.current && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch (e) {
+          console.log('Recognition already started');
+        }
+      }
     };
 
     utterance.onerror = () => {
@@ -186,14 +205,20 @@ export function useVoiceChat({ language, onTranscript, onSpeakingChange }: UseVo
     onSpeakingChange?.(false);
   }, [onSpeakingChange]);
 
+  const setAutoListen = useCallback((enabled: boolean) => {
+    shouldAutoListenRef.current = enabled;
+  }, []);
+
   return {
     isListening,
     isSpeaking,
     isSupported,
+    interimText,
     startListening,
     stopListening,
     speak,
     stopSpeaking,
+    setAutoListen,
   };
 }
 

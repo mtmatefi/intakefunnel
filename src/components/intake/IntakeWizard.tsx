@@ -77,25 +77,35 @@ export function IntakeWizard() {
   const [currentValidation, setCurrentValidation] = useState<AIValidation | null>(null);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasRestoredRef = useRef(false);
 
   // Voice chat integration
   const handleVoiceTranscript = useCallback((text: string) => {
     setInputValue(prev => prev + (prev ? ' ' : '') + text);
+    setLiveTranscript('');
+  }, []);
+
+  const handleInterimTranscript = useCallback((text: string) => {
+    setLiveTranscript(text);
   }, []);
 
   const { 
     isListening, 
     isSpeaking, 
     isSupported: voiceSupported,
+    interimText,
     startListening, 
     stopListening, 
     speak, 
-    stopSpeaking 
+    stopSpeaking,
+    setAutoListen 
   } = useVoiceChat({
     language,
     onTranscript: handleVoiceTranscript,
+    onInterimTranscript: handleInterimTranscript,
+    autoListenAfterSpeak: true,
   });
 
   const categoryQuestions = interviewQuestions.filter(q => q.category === currentCategory);
@@ -393,12 +403,23 @@ export function IntakeWizard() {
     if (voiceEnabled) {
       stopListening();
       stopSpeaking();
+      setAutoListen(false);
       setVoiceEnabled(false);
+      setLiveTranscript('');
       toast.info(language === 'de' ? 'Sprachmodus deaktiviert' : 'Voice mode disabled');
     } else {
       setVoiceEnabled(true);
-      toast.success(language === 'de' ? 'Sprachmodus aktiviert - Sprechen Sie!' : 'Voice mode enabled - Start speaking!');
-      startListening();
+      setAutoListen(true);
+      toast.success(
+        language === 'de' 
+          ? 'Sprachmodus aktiviert - Ich stelle jetzt Fragen per Audio!' 
+          : 'Voice mode enabled - I will ask questions via audio!'
+      );
+      // Speak the current question
+      if (currentQuestion) {
+        const questionText = getQuestionText(currentQuestion);
+        speak(questionText);
+      }
     }
   };
 
@@ -569,44 +590,79 @@ export function IntakeWizard() {
           {/* Voice Mode Toggle */}
           {voiceSupported && (
             <Card className={cn(
-              "border-2 transition-colors",
-              voiceEnabled ? "border-primary bg-primary/5" : "border-border"
+              "border-2 transition-all duration-300",
+              voiceEnabled ? "border-primary bg-primary/5 shadow-lg" : "border-border"
             )}>
-              <CardContent className="pt-4">
+              <CardContent className="pt-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {voiceEnabled ? (
-                      <Mic className="h-5 w-5 text-primary animate-pulse" />
+                      <div className="relative">
+                        <Mic className="h-6 w-6 text-primary" />
+                        {isListening && (
+                          <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full animate-pulse" />
+                        )}
+                      </div>
                     ) : (
                       <MicOff className="h-5 w-5 text-muted-foreground" />
                     )}
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">
-                        {language === 'de' ? 'Sprachmodus' : 'Voice Mode'}
+                        {language === 'de' ? 'Voice Interview' : 'Voice Interview'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {voiceEnabled 
-                          ? (isListening 
-                              ? (language === 'de' ? 'Ich höre zu...' : 'Listening...') 
-                              : (isSpeaking 
-                                  ? (language === 'de' ? 'Ich spreche...' : 'Speaking...') 
-                                  : (language === 'de' ? 'Aktiv' : 'Active')))
-                          : (language === 'de' ? 'Tippen Sie oder sprechen Sie' : 'Type or speak')}
+                          ? (isSpeaking 
+                              ? (language === 'de' ? '🔊 Ich spreche...' : '🔊 Speaking...') 
+                              : (isListening 
+                                  ? (language === 'de' ? '🎤 Ich höre zu...' : '🎤 Listening...') 
+                                  : (language === 'de' ? '✨ Bereit' : '✨ Ready')))
+                          : (language === 'de' ? 'Wie ein echtes Interview' : 'Like a real interview')}
                       </p>
                     </div>
                   </div>
                   <Button 
-                    variant={voiceEnabled ? "default" : "outline"} 
+                    variant={voiceEnabled ? "destructive" : "default"} 
                     size="sm"
                     onClick={toggleVoice}
+                    className="gap-2"
                   >
                     {voiceEnabled ? (
-                      <VolumeX className="h-4 w-4" />
+                      <>
+                        <VolumeX className="h-4 w-4" />
+                        {language === 'de' ? 'Stopp' : 'Stop'}
+                      </>
                     ) : (
-                      <Volume2 className="h-4 w-4" />
+                      <>
+                        <Volume2 className="h-4 w-4" />
+                        {language === 'de' ? 'Starten' : 'Start'}
+                      </>
                     )}
                   </Button>
                 </div>
+
+                {/* Live Transcription Display */}
+                {voiceEnabled && (liveTranscript || interimText) && (
+                  <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {language === 'de' ? '📝 Live-Transkription:' : '📝 Live transcription:'}
+                    </p>
+                    <p className="text-sm italic text-foreground/80">
+                      "{liveTranscript || interimText}"
+                    </p>
+                  </div>
+                )}
+
+                {voiceEnabled && isListening && !liveTranscript && !interimText && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex gap-1">
+                      <span className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span>{language === 'de' ? 'Sprechen Sie jetzt...' : 'Speak now...'}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
