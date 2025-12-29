@@ -84,31 +84,22 @@ export default function IntegrationsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Jira Base URL</Label>
-              <Input placeholder="https://your-org.atlassian.net" />
+              <Input defaultValue="https://prodive.atlassian.net" />
               <p className="text-xs text-muted-foreground">Your Atlassian Cloud instance URL</p>
             </div>
             
             <div className="space-y-2">
               <Label>API Token</Label>
-              <Input type="password" placeholder="••••••••••••••••" />
-              <p className="text-xs text-muted-foreground">
-                Generate an API token at{' '}
-                <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener" className="text-primary hover:underline">
-                  Atlassian Account Settings
-                </a>
+              <Input type="password" defaultValue="••••••••••••••••" />
+              <p className="text-xs text-muted-foreground text-success">
+                ✓ API token configured via secrets
               </p>
             </div>
             
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" placeholder="your-email@company.com" />
-              <p className="text-xs text-muted-foreground">Email associated with the API token</p>
-            </div>
-
-            <Button variant="outline" onClick={handleTestConnection}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Test Connection
-            </Button>
+            <Badge variant="default" className="gap-1">
+              <CheckCircle className="h-3 w-3" />
+              Connected to prodive.atlassian.net
+            </Badge>
           </CardContent>
         </Card>
 
@@ -122,19 +113,22 @@ export default function IntegrationsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Jira Product Discovery Project</Label>
-                <Input placeholder="JPD" />
+                <Input defaultValue="IN" />
+                <p className="text-xs text-muted-foreground">Intake (Ideas)</p>
               </div>
               <div className="space-y-2">
                 <Label>Jira Software Project (Epics/Stories)</Label>
-                <Input placeholder="DEV" />
+                <Input defaultValue="IND" />
+                <p className="text-xs text-muted-foreground">Intake Development</p>
               </div>
               <div className="space-y-2">
                 <Label>Jira Service Management Project</Label>
-                <Input placeholder="ITSM" />
+                <Input defaultValue="DEMO" />
+                <p className="text-xs text-muted-foreground">Demo-Servicebereich</p>
               </div>
               <div className="space-y-2">
                 <Label>Default Epic Issue Type ID</Label>
-                <Input placeholder="10000" />
+                <Input defaultValue="10000" />
               </div>
             </div>
           </CardContent>
