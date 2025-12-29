@@ -21,8 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { demoIntakes, deliveryPathInfo } from '@/data/demo';
-import type { IntakeStatus, DeliveryPath } from '@/types/intake';
+import { useIntakes } from '@/hooks/useIntakes';
+import { deliveryPathInfo } from '@/data/demo';
+import type { IntakeStatus } from '@/types/intake';
 import { 
   PlusCircle, 
   Search, 
@@ -33,6 +34,7 @@ import {
   AlertCircle,
   FileText,
   Send,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,32 +58,27 @@ const priorityColors = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { data: intakes = [], isLoading } = useIntakes();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  const filteredIntakes = demoIntakes.filter(intake => {
-    const matchesSearch = intake.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      intake.requesterName.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredIntakes = intakes.filter(intake => {
+    const matchesSearch = intake.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || intake.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || intake.category === categoryFilter;
-    
-    // Requesters only see their own intakes
-    if (user?.role === 'requester') {
-      return matchesSearch && matchesStatus && matchesCategory && intake.requesterId === user.id;
-    }
     
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
   const stats = {
-    total: demoIntakes.length,
-    pending: demoIntakes.filter(i => i.status === 'pending_approval').length,
-    approved: demoIntakes.filter(i => i.status === 'approved').length,
-    draft: demoIntakes.filter(i => i.status === 'draft').length,
+    total: intakes.length,
+    pending: intakes.filter(i => i.status === 'pending_approval').length,
+    approved: intakes.filter(i => i.status === 'approved').length,
+    draft: intakes.filter(i => i.status === 'draft').length,
   };
 
-  const categories = [...new Set(demoIntakes.map(i => i.category).filter(Boolean))];
+  const categories = [...new Set(intakes.map(i => i.category).filter(Boolean))];
 
   return (
     <AppLayout>
@@ -173,79 +170,81 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Requester</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredIntakes.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No intakes found. Create your first intake to get started.
-                    </TableCell>
+                    <TableHead className="w-[300px]">Title</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Updated</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
-                ) : (
-                  filteredIntakes.map((intake) => {
-                    const status = statusConfig[intake.status];
-                    return (
-                      <TableRow key={intake.id}>
-                        <TableCell>
-                          <Link 
-                            to={`/intake/${intake.id}`}
-                            className="font-medium text-foreground hover:underline"
-                          >
-                            {intake.title}
-                          </Link>
-                          {intake.valueStream && (
-                            <p className="text-xs text-muted-foreground">{intake.valueStream}</p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={status.variant} className="gap-1">
-                            <status.icon className="h-3 w-3" />
-                            {status.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {intake.category || '—'}
-                        </TableCell>
-                        <TableCell>
-                          {intake.priority && (
-                            <span className={cn(
-                              'px-2 py-1 text-xs font-medium capitalize',
-                              priorityColors[intake.priority]
-                            )}>
-                              {intake.priority}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {intake.requesterName}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {new Date(intake.updatedAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link to={`/intake/${intake.id}`}>
-                              <ArrowUpRight className="h-4 w-4" />
+                </TableHeader>
+                <TableBody>
+                  {filteredIntakes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No intakes found. Create your first intake to get started.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredIntakes.map((intake) => {
+                      const status = statusConfig[intake.status];
+                      return (
+                        <TableRow key={intake.id}>
+                          <TableCell>
+                            <Link 
+                              to={`/intake/${intake.id}`}
+                              className="font-medium text-foreground hover:underline"
+                            >
+                              {intake.title}
                             </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                            {intake.value_stream && (
+                              <p className="text-xs text-muted-foreground">{intake.value_stream}</p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={status.variant} className="gap-1">
+                              <status.icon className="h-3 w-3" />
+                              {status.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {intake.category || '—'}
+                          </TableCell>
+                          <TableCell>
+                            {intake.priority && (
+                              <span className={cn(
+                                'px-2 py-1 text-xs font-medium capitalize',
+                                priorityColors[intake.priority as keyof typeof priorityColors]
+                              )}>
+                                {intake.priority}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {new Date(intake.updated_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link to={`/intake/${intake.id}`}>
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
