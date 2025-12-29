@@ -29,6 +29,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCreateIntake, useSaveTranscript, useGenerateSpec } from '@/hooks/useIntakes';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,7 +56,14 @@ interface AIValidation {
 export function IntakeWizard() {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
+  const { user } = useAuth();
   const { saveState, loadState, clearState, hasSavedState } = useAutoSave();
+  
+  // Database mutations
+  const createIntake = useCreateIntake();
+  const saveTranscript = useSaveTranscript();
+  const generateSpec = useGenerateSpec();
+  const [isSaving, setIsSaving] = useState(false);
   
   const [currentCategory, setCurrentCategory] = useState<string>('problem');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -396,15 +405,82 @@ export function IntakeWizard() {
   const isComplete = answeredQuestions >= totalQuestions;
 
   const handleGenerateSpec = async () => {
-    toast.loading(t('wizard.generatingSpec'), { id: 'gen-spec' });
+    if (!user) {
+      toast.error(language === 'de' ? 'Bitte zuerst anmelden' : 'Please login first');
+      navigate('/login');
+      return;
+    }
+
+    setIsSaving(true);
     
     try {
+      // Step 1: Create intake record
+      toast.loading(language === 'de' ? 'Speichere Interview...' : 'Saving interview...', { id: 'gen-spec' });
+      
+      // Generate title from first answer or problem statement
+      const title = answers['problem_statement']?.substring(0, 100) || 
+                    answers['current_process']?.substring(0, 100) ||
+                    `Intake ${new Date().toLocaleDateString()}`;
+      
+      const intake = await createIntake.mutateAsync({
+        title,
+        valueStream: answers['value_stream'] || undefined,
+        category: answers['category'] || undefined,
+      });
+
+      console.log('Created intake:', intake.id);
+
+      // Step 2: Save transcript
+      toast.loading(language === 'de' ? 'Speichere Gespräch...' : 'Saving conversation...', { id: 'gen-spec' });
+      
+      const transcriptMessages = transcript.map(msg => ({
+        speaker: msg.speaker,
+        message: msg.message,
+        questionKey: msg.questionKey || undefined,
+        timestamp: msg.timestamp,
+      }));
+
+      await saveTranscript.mutateAsync({
+        intakeId: intake.id,
+        messages: transcriptMessages,
+      });
+
+      console.log('Saved transcript:', transcriptMessages.length, 'messages');
+
+      // Step 3: Generate specification with AI
+      toast.loading(language === 'de' ? 'Generiere Spezifikation mit KI...' : 'Generating specification with AI...', { id: 'gen-spec' });
+      
+      await generateSpec.mutateAsync(intake.id);
+
+      console.log('Generated spec for intake:', intake.id);
+
       // Clear auto-save on success
       clearState();
-      toast.success(t('wizard.specGenerated'), { id: 'gen-spec' });
-      navigate('/intake/intake-1');
+      
+      toast.success(
+        language === 'de' ? 'Spezifikation erstellt!' : 'Specification generated!', 
+        { 
+          id: 'gen-spec',
+          description: language === 'de' 
+            ? 'KI hat das Interview analysiert und eine strukturierte Spezifikation erstellt'
+            : 'AI has analyzed the interview and created a structured specification',
+        }
+      );
+
+      // Navigate to the detail page
+      navigate(`/intake/${intake.id}`);
+      
     } catch (error) {
-      toast.error(t('wizard.specError'), { id: 'gen-spec' });
+      console.error('Error in handleGenerateSpec:', error);
+      toast.error(
+        language === 'de' ? 'Fehler beim Speichern' : 'Error saving', 
+        { 
+          id: 'gen-spec',
+          description: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -560,9 +636,19 @@ export function IntakeWizard() {
                 <p className="text-sm text-muted-foreground">
                   {t('wizard.completeDesc')}
                 </p>
-                <Button onClick={handleGenerateSpec} className="w-full">
-                  <FileText className="mr-2 h-4 w-4" />
-                  {t('wizard.generateSpec')}
+                <Button 
+                  onClick={handleGenerateSpec} 
+                  className="w-full"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="mr-2 h-4 w-4" />
+                  )}
+                  {isSaving 
+                    ? (language === 'de' ? 'Speichere...' : 'Saving...') 
+                    : t('wizard.generateSpec')}
                 </Button>
               </CardContent>
             </Card>
