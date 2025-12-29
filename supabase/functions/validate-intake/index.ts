@@ -12,6 +12,7 @@ interface ValidationRequest {
   userAnswer: string;
   category: string;
   previousAnswers: Record<string, string>;
+  language: 'de' | 'en';
 }
 
 serve(async (req) => {
@@ -20,17 +21,18 @@ serve(async (req) => {
   }
 
   try {
-    const { questionKey, questionText, userAnswer, category, previousAnswers } = await req.json() as ValidationRequest;
+    const { questionKey, questionText, userAnswer, category, previousAnswers, language = 'de' } = await req.json() as ValidationRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log(`Validating answer for question: ${questionKey}`);
+    console.log(`Validating answer for question: ${questionKey} in language: ${language}`);
 
-    const systemPrompt = `Du bist ein erfahrener Solution Architect und Business Analyst, der Software-Anforderungen sammelt. 
+    const systemPromptDE = `Du bist ein erfahrener Solution Architect und Business Analyst, der Software-Anforderungen sammelt. 
 Deine Aufgabe ist es, Benutzerantworten zu validieren und bei Bedarf Nachfragen zu stellen.
+WICHTIG: Antworte IMMER auf Deutsch!
 
 Antworte IMMER im folgenden JSON-Format:
 {
@@ -52,14 +54,51 @@ Regeln:
 
 Sei freundlich aber gründlich. Stelle Nachfragen nur wenn wirklich wichtig.`;
 
-    const userPrompt = `Kategorie: ${category}
+    const systemPromptEN = `You are an experienced Solution Architect and Business Analyst gathering software requirements. 
+Your task is to validate user answers and ask follow-up questions when needed.
+IMPORTANT: Always respond in English!
+
+Always respond in the following JSON format:
+{
+  "isComplete": boolean,
+  "quality": "excellent" | "good" | "needs_improvement" | "insufficient",
+  "followUpQuestion": string | null,
+  "suggestions": string[],
+  "enrichedAnswer": string | null,
+  "missingAspects": string[]
+}
+
+Rules:
+- isComplete: true if the answer is sufficiently detailed
+- quality: Assessment of answer quality
+- followUpQuestion: A specific follow-up if important info is missing (null if complete)
+- suggestions: Concrete improvement suggestions (max 3)
+- enrichedAnswer: If you can enhance the answer for Jira, an improved version
+- missingAspects: What's still missing for a complete specification
+
+Be friendly but thorough. Only ask follow-ups when really important.`;
+
+    const systemPrompt = language === 'en' ? systemPromptEN : systemPromptDE;
+
+    const userPromptDE = `Kategorie: ${category}
 Frage: ${questionText}
 Benutzerantwort: ${userAnswer}
 
 Bisherige Antworten in dieser Session:
 ${Object.entries(previousAnswers).map(([k, v]) => `- ${k}: ${v}`).join('\n') || 'Keine bisherigen Antworten'}
 
-Analysiere die Antwort und gib Feedback.`;
+Analysiere die Antwort und gib Feedback auf Deutsch.`;
+
+    const userPromptEN = `Category: ${category}
+Question: ${questionText}
+User answer: ${userAnswer}
+
+Previous answers in this session:
+${Object.entries(previousAnswers).map(([k, v]) => `- ${k}: ${v}`).join('\n') || 'No previous answers'}
+
+Analyze the answer and provide feedback in English.`;
+
+    const userPrompt = language === 'en' ? userPromptEN : userPromptDE;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

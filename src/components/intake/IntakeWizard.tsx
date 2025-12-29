@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { interviewQuestions, categoryLabels } from '@/data/demo';
+import { interviewQuestions } from '@/data/demo';
 import type { InterviewQuestion, TranscriptMessage } from '@/types/intake';
 import { cn } from '@/lib/utils';
 import { 
@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 const categories = ['problem', 'users', 'data', 'integrations', 'ux', 'nfr'] as const;
 
@@ -43,6 +45,7 @@ interface AIValidation {
 
 export function IntakeWizard() {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const [currentCategory, setCurrentCategory] = useState<string>('problem');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -62,6 +65,20 @@ export function IntakeWizard() {
   const answeredQuestions = Object.keys(answers).length;
   const progress = (answeredQuestions / totalQuestions) * 100;
 
+  // Get translated question text
+  const getQuestionText = (q: InterviewQuestion) => {
+    return t(`q.${q.key}`) !== `q.${q.key}` ? t(`q.${q.key}`) : q.question;
+  };
+
+  const getHelpText = (q: InterviewQuestion) => {
+    const key = `q.${q.key}.help`;
+    return t(key) !== key ? t(key) : q.helpText;
+  };
+
+  const getCategoryLabel = (cat: string) => {
+    return t(`category.${cat}`);
+  };
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript]);
@@ -69,19 +86,24 @@ export function IntakeWizard() {
   useEffect(() => {
     // Add initial assistant message when category changes
     if (currentQuestion && !transcript.find(t => t.questionKey === currentQuestion.key)) {
-      const categoryIntro = currentQuestionIndex === 0 ? 
-        `Gut, lassen Sie uns über ${categoryLabels[currentCategory].toLowerCase()} sprechen. ` : '';
+      const categoryLabel = getCategoryLabel(currentCategory);
+      const categoryIntro = currentQuestionIndex === 0 
+        ? t('wizard.categoryIntro').replace('{category}', categoryLabel.toLowerCase()) + ' '
+        : '';
+      
+      const questionText = getQuestionText(currentQuestion);
+      const helpText = getHelpText(currentQuestion);
       
       setTranscript(prev => [...prev, {
         id: `msg-${Date.now()}`,
         intakeId: 'new',
         speaker: 'assistant',
-        message: `${categoryIntro}${currentQuestion.question}${currentQuestion.helpText ? `\n\n💡 ${currentQuestion.helpText}` : ''}`,
+        message: `${categoryIntro}${questionText}${helpText ? `\n\n💡 ${helpText}` : ''}`,
         timestamp: new Date().toISOString(),
         questionKey: currentQuestion.key,
       }]);
     }
-  }, [currentCategory, currentQuestionIndex, currentQuestion]);
+  }, [currentCategory, currentQuestionIndex, currentQuestion, language]);
 
   const validateWithAI = async (questionKey: string, questionText: string, answer: string) => {
     setIsValidating(true);
@@ -92,7 +114,8 @@ export function IntakeWizard() {
           questionText,
           userAnswer: answer,
           category: currentCategory,
-          previousAnswers: answers
+          previousAnswers: answers,
+          language
         }
       });
 
@@ -128,14 +151,15 @@ export function IntakeWizard() {
     setIsProcessing(true);
 
     // If this is answering a follow-up question, combine with previous answer
+    const additionLabel = t('wizard.addition');
     const combinedAnswer = pendingFollowUp 
-      ? `${answers[currentQuestion.key] || ''}\n\nErgänzung: ${userMessage}`
+      ? `${answers[currentQuestion.key] || ''}\n\n${additionLabel}: ${userMessage}`
       : userMessage;
 
     // Validate with AI
     const validation = await validateWithAI(
       currentQuestion.key, 
-      pendingFollowUp || currentQuestion.question,
+      pendingFollowUp || getQuestionText(currentQuestion),
       combinedAnswer
     );
 
@@ -147,11 +171,12 @@ export function IntakeWizard() {
       setIsProcessing(false);
       
       // Show AI follow-up question
+      const tipLabel = language === 'de' ? 'Tipp' : 'Tip';
       setTranscript(prev => [...prev, {
         id: `msg-${Date.now()}`,
         intakeId: 'new',
         speaker: 'assistant',
-        message: `🤔 ${validation.followUpQuestion}${validation.suggestions?.length > 0 ? `\n\n💡 Tipp: ${validation.suggestions[0]}` : ''}`,
+        message: `🤔 ${validation.followUpQuestion}${validation.suggestions?.length > 0 ? `\n\n💡 ${tipLabel}: ${validation.suggestions[0]}` : ''}`,
         timestamp: new Date().toISOString(),
       }]);
       
@@ -179,19 +204,14 @@ export function IntakeWizard() {
         insufficient: '⚠️'
       }[validation.quality];
       
-      const qualityMessages = {
-        excellent: 'Ausgezeichnet, sehr detailliert!',
-        good: 'Gut erfasst.',
-        needs_improvement: 'Okay, ich habe die wichtigsten Punkte.',
-        insufficient: 'Verstanden, wir können das später ergänzen.'
-      };
+      const qualityMessage = t(`quality.${validation.quality}`);
 
       // Add quality feedback
       setTranscript(prev => [...prev, {
         id: `msg-${Date.now()}-feedback`,
         intakeId: 'new',
         speaker: 'assistant',
-        message: `${qualityEmoji} ${qualityMessages[validation.quality]}`,
+        message: `${qualityEmoji} ${qualityMessage}`,
         timestamp: new Date().toISOString(),
       }]);
     }
@@ -214,7 +234,7 @@ export function IntakeWizard() {
             id: `msg-${Date.now()}`,
             intakeId: 'new',
             speaker: 'assistant',
-            message: '✅ Ausgezeichnet! Ich habe alle Informationen, die ich brauche. Ich werde jetzt eine strukturierte Spezifikation und Routing-Empfehlung für Ihre Überprüfung generieren.',
+            message: `✅ ${t('wizard.allDone')}`,
             timestamp: new Date().toISOString(),
           }]);
         }
@@ -237,7 +257,7 @@ export function IntakeWizard() {
       id: `msg-${Date.now()}`,
       intakeId: 'new',
       speaker: 'user',
-      message: '[Übersprungen]',
+      message: t('wizard.skipped'),
       timestamp: new Date().toISOString(),
     }]);
 
@@ -258,15 +278,15 @@ export function IntakeWizard() {
   const isComplete = answeredQuestions >= totalQuestions;
 
   const handleGenerateSpec = async () => {
-    toast.loading('Generiere Spezifikation mit AI...', { id: 'gen-spec' });
+    toast.loading(t('wizard.generatingSpec'), { id: 'gen-spec' });
     
     try {
       // In production: Create intake, save transcript, generate spec
       // For now, navigate to demo
-      toast.success('Spezifikation erfolgreich generiert!', { id: 'gen-spec' });
+      toast.success(t('wizard.specGenerated'), { id: 'gen-spec' });
       navigate('/intake/intake-1');
     } catch (error) {
-      toast.error('Fehler bei der Generierung', { id: 'gen-spec' });
+      toast.error(t('wizard.specError'), { id: 'gen-spec' });
     }
   };
 
@@ -276,8 +296,11 @@ export function IntakeWizard() {
       <div className="lg:col-span-1 space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Interview Fortschritt</CardTitle>
-            <CardDescription>{answeredQuestions} von {totalQuestions} Fragen</CardDescription>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">{t('wizard.progress')}</CardTitle>
+              <LanguageSelector />
+            </div>
+            <CardDescription>{answeredQuestions} {t('wizard.questionsOf')} {totalQuestions} {t('wizard.questions')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Progress value={progress} className="h-2" />
@@ -311,7 +334,7 @@ export function IntakeWizard() {
                       )}>
                         {isCatComplete ? <CheckCircle className="h-4 w-4" /> : index + 1}
                       </span>
-                      <span className="text-sm font-medium">{categoryLabels[cat]}</span>
+                      <span className="text-sm font-medium">{getCategoryLabel(cat)}</span>
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {catAnswered}/{catQuestions.length}
@@ -329,9 +352,9 @@ export function IntakeWizard() {
             <div className="flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-primary mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium">AI-Assistent aktiv</p>
+                <p className="text-sm font-medium">{t('wizard.aiActive')}</p>
                 <p className="text-xs text-muted-foreground">
-                  Die AI prüft Ihre Antworten und stellt bei Bedarf Nachfragen für bessere Spezifikationen.
+                  {t('wizard.aiDescription')}
                 </p>
               </div>
             </div>
@@ -343,14 +366,14 @@ export function IntakeWizard() {
             <CardContent className="pt-6 space-y-4">
               <div className="flex items-center gap-2 text-success">
                 <CheckCircle className="h-5 w-5" />
-                <span className="font-medium">Interview Abgeschlossen</span>
+                <span className="font-medium">{t('wizard.complete')}</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Bereit zur Generierung Ihrer Spezifikation und Routing-Empfehlung.
+                {t('wizard.completeDesc')}
               </p>
               <Button onClick={handleGenerateSpec} className="w-full">
                 <FileText className="mr-2 h-4 w-4" />
-                Spezifikation Generieren
+                {t('wizard.generateSpec')}
               </Button>
             </CardContent>
           </Card>
@@ -364,16 +387,16 @@ export function IntakeWizard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base">Intake Interview</CardTitle>
+                <CardTitle className="text-base">{t('wizard.title')}</CardTitle>
               </div>
               <div className="flex items-center gap-2">
                 {isValidating && (
                   <Badge variant="outline" className="gap-1">
                     <Sparkles className="h-3 w-3 animate-pulse" />
-                    AI prüft...
+                    {t('wizard.aiChecking')}
                   </Badge>
                 )}
-                <Badge variant="outline">{categoryLabels[currentCategory]}</Badge>
+                <Badge variant="outline">{getCategoryLabel(currentCategory)}</Badge>
               </div>
             </div>
           </CardHeader>
@@ -382,7 +405,7 @@ export function IntakeWizard() {
             {transcript.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Starte Ihr Intake-Interview...</p>
+                <p>{t('wizard.startMessage')}</p>
               </div>
             )}
             
@@ -412,7 +435,7 @@ export function IntakeWizard() {
                 <div className="bg-muted p-3 rounded-lg flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="text-sm text-muted-foreground">
-                    {isValidating ? 'AI analysiert...' : 'Verarbeite...'}
+                    {isValidating ? t('wizard.aiAnalyzing') : t('wizard.processing')}
                   </span>
                 </div>
               </div>
@@ -427,10 +450,10 @@ export function IntakeWizard() {
               <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <HelpCircle className="h-4 w-4" />
-                  <span>Nachfrage - Sie können antworten oder überspringen</span>
+                  <span>{t('wizard.followUp')}</span>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleSkipFollowUp}>
-                  Überspringen
+                  {t('common.skip')}
                 </Button>
               </div>
             )}
@@ -455,7 +478,7 @@ export function IntakeWizard() {
                 <Textarea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={pendingFollowUp ? "Ihre Ergänzung..." : "Ihre Antwort eingeben..."}
+                  placeholder={pendingFollowUp ? t('wizard.yourAddition') : t('wizard.yourAnswer')}
                   className="min-h-[80px] resize-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -468,7 +491,7 @@ export function IntakeWizard() {
                 <Input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ihre Antwort eingeben..."
+                  placeholder={t('wizard.yourAnswer')}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handleSubmitAnswer();
