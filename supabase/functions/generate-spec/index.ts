@@ -166,31 +166,33 @@ function generateRoutingExplanation(path: DeliveryPath, breakdown: ScoreBreakdow
   return explanation;
 }
 
-const systemPrompt = `You are a software requirements analyst. Your job is to analyze interview transcripts and generate structured specifications.
+const systemPrompt = `Du bist ein Software-Anforderungsanalyst. Deine Aufgabe ist es, Interview-Transkripte zu analysieren und strukturierte Spezifikationen zu erstellen.
 
-Given a conversation transcript between a user and an AI assistant about a software need, extract and generate:
+WICHTIG: Alle Ausgaben müssen auf DEUTSCH sein!
 
-1. Problem Statement - Clear summary of the issue
-2. Current Process - How things work today
-3. Pain Points - List of frustrations and problems
-4. Goals - What success looks like
-5. Constraints - Limitations to work within
-6. Users - Who will use this (personas, counts, tech levels)
-7. Frequency & Volumes - How often and how much
-8. Data Types - What data is involved
-9. Data Classification - public/internal/confidential/restricted
-10. Retention Period - How long to keep data
-11. Privacy Requirements - Any privacy needs
-12. Integrations - Systems to connect with (system, type, priority)
-13. UX Needs - Interface requirements (mobile, offline, etc.)
-14. NFRs - Non-functional requirements (availability, response time, etc.)
-15. Acceptance Criteria - Given-When-Then test scenarios
-16. Test Suggestions - Types of tests needed
-17. Risks - Potential problems with probability and impact
-18. Assumptions - Things assumed to be true
-19. Open Questions - Things still to be clarified
+Gegeben ein Gesprächstranskript zwischen einem Benutzer und einem KI-Assistenten über einen Software-Bedarf, extrahiere und generiere:
 
-Be thorough but concise. Focus on actionable, specific details.`;
+1. Problemstellung - Klare Zusammenfassung des Problems
+2. Aktueller Prozess - Wie die Dinge heute funktionieren
+3. Schmerzpunkte - Liste von Frustrationen und Problemen
+4. Ziele - Was Erfolg bedeutet
+5. Einschränkungen - Limitierungen
+6. Benutzer - Wer wird dies nutzen (Personas, Anzahl, technisches Niveau)
+7. Häufigkeit & Volumen - Wie oft und wie viel
+8. Datentypen - Welche Daten sind betroffen
+9. Datenklassifizierung - public/internal/confidential/restricted
+10. Aufbewahrungsfrist - Wie lange Daten aufbewahrt werden
+11. Datenschutzanforderungen - Datenschutzbedürfnisse
+12. Integrationen - Systeme zur Verbindung (System, Typ, Priorität)
+13. UX-Anforderungen - Schnittstellenanforderungen (mobil, offline, etc.)
+14. NFRs - Nicht-funktionale Anforderungen (Verfügbarkeit, Antwortzeit, etc.)
+15. Akzeptanzkriterien - Given-When-Then Testszenarien
+16. Testvorschläge - Arten von benötigten Tests
+17. Risiken - Potenzielle Probleme mit Wahrscheinlichkeit und Auswirkung
+18. Annahmen - Dinge, die als wahr angenommen werden
+19. Offene Fragen - Dinge, die noch geklärt werden müssen
+
+Sei gründlich aber präzise. Konzentriere dich auf umsetzbare, spezifische Details. ALLE AUSGABEN AUF DEUTSCH!`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

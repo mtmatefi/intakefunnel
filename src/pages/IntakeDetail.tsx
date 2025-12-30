@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useIntake, useTranscript, useSpec, useRoutingScore, useExportToJira, useUpdateIntakeStatus, useGenerateSpec } from '@/hooks/useIntakes';
+import { useIntake, useTranscript, useSpec, useRoutingScore, useExportToJira, useUpdateIntakeStatus, useGenerateSpec, useJiraExport } from '@/hooks/useIntakes';
 import { deliveryPathInfo } from '@/data/demo';
 import { cn } from '@/lib/utils';
 import { 
@@ -43,6 +43,7 @@ export default function IntakeDetailPage() {
   const { data: transcript = [], isLoading: transcriptLoading } = useTranscript(id);
   const { data: specDoc, isLoading: specLoading } = useSpec(id);
   const { data: routing, isLoading: routingLoading } = useRoutingScore(id);
+  const { data: jiraExport } = useJiraExport(id);
   
   const exportToJira = useExportToJira();
   const updateStatus = useUpdateIntakeStatus();
@@ -134,14 +135,14 @@ export default function IntakeDetailPage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <div className="flex items-start gap-4 min-w-0 flex-1">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-2xl font-bold text-foreground">{intake.title}</h1>
-                <Badge variant={intake.status === 'pending_approval' ? 'default' : 'secondary'}>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start gap-2 mb-1 flex-wrap">
+                <h1 className="text-2xl font-bold text-foreground break-words">{intake.title}</h1>
+                <Badge variant={intake.status === 'pending_approval' ? 'default' : 'secondary'} className="flex-shrink-0">
                   {intake.status.replace(/_/g, ' ')}
                 </Badge>
               </div>
@@ -184,6 +185,78 @@ export default function IntakeDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Jira Export Card */}
+        {jiraExport && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 flex items-center justify-center bg-primary text-primary-foreground">
+                    <ExternalLink className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Jira Export</p>
+                    <p className="text-lg font-bold">
+                      {jiraExport.status === 'success' ? 'Erfolgreich exportiert' : jiraExport.status}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {jiraExport.epic_key && (
+                    <Button variant="outline" asChild>
+                      <a 
+                        href={`${localStorage.getItem('jira_base_url') || 'https://jira.atlassian.net'}/browse/${jiraExport.epic_key}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Epic: {jiraExport.epic_key}
+                      </a>
+                    </Button>
+                  )}
+                  {jiraExport.jpd_issue_key && (
+                    <Button variant="outline" asChild>
+                      <a 
+                        href={`${localStorage.getItem('jira_base_url') || 'https://jira.atlassian.net'}/browse/${jiraExport.jpd_issue_key}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        JPD: {jiraExport.jpd_issue_key}
+                      </a>
+                    </Button>
+                  )}
+                  {jiraExport.jsm_request_key && (
+                    <Button variant="outline" asChild>
+                      <a 
+                        href={`${localStorage.getItem('jira_base_url') || 'https://jira.atlassian.net'}/browse/${jiraExport.jsm_request_key}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        JSM: {jiraExport.jsm_request_key}
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {jiraExport.logs && jiraExport.logs.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-1">Export Logs:</p>
+                  <ul className="text-xs text-muted-foreground space-y-0.5">
+                    {jiraExport.logs.map((log, i) => (
+                      <li key={i}>• {log}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Routing Summary Card */}
         {routing && pathInfo && (

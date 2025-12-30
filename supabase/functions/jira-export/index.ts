@@ -233,22 +233,46 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { error: updateError } = await supabase
+    // Check if export already exists
+    const { data: existingExport } = await supabase
       .from('jira_exports')
-      .upsert({
-        intake_id: intakeId,
-        epic_key: epicKey,
-        jpd_issue_key: jpdIssueKey,
-        jsm_request_key: jsmRequestKey,
-        status: epicKey ? 'success' : 'failed',
-        logs: logs,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'intake_id'
-      });
+      .select('id')
+      .eq('intake_id', intakeId)
+      .maybeSingle();
 
-    if (updateError) {
-      console.error('Failed to update jira_exports:', updateError);
+    if (existingExport) {
+      // Update existing export
+      const { error: updateError } = await supabase
+        .from('jira_exports')
+        .update({
+          epic_key: epicKey,
+          jpd_issue_key: jpdIssueKey,
+          jsm_request_key: jsmRequestKey,
+          status: epicKey ? 'success' : 'failed',
+          logs: logs,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingExport.id);
+
+      if (updateError) {
+        console.error('Failed to update jira_exports:', updateError);
+      }
+    } else {
+      // Insert new export
+      const { error: insertError } = await supabase
+        .from('jira_exports')
+        .insert({
+          intake_id: intakeId,
+          epic_key: epicKey,
+          jpd_issue_key: jpdIssueKey,
+          jsm_request_key: jsmRequestKey,
+          status: epicKey ? 'success' : 'failed',
+          logs: logs,
+        });
+
+      if (insertError) {
+        console.error('Failed to insert jira_exports:', insertError);
+      }
     }
 
     return new Response(
@@ -257,6 +281,7 @@ serve(async (req) => {
         epicKey,
         jpdIssueKey,
         jsmRequestKey,
+        jiraBaseUrl: baseUrl,
         logs,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
