@@ -19,16 +19,17 @@ import {
   HelpCircle,
   Mic,
   MicOff,
-  Volume2,
-  VolumeX,
   RotateCcw,
+  Check,
+  Plus,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { useVoiceAssistant, type VoiceAssistantState } from '@/hooks/useVoiceAssistant';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateIntake, useSaveTranscript, useGenerateSpec } from '@/hooks/useIntakes';
 import {
@@ -76,37 +77,30 @@ export function IntakeWizard() {
   const [pendingFollowUp, setPendingFollowUp] = useState<string | null>(null);
   const [currentValidation, setCurrentValidation] = useState<AIValidation | null>(null);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasRestoredRef = useRef(false);
 
-  // Voice chat integration
-  const handleVoiceTranscript = useCallback((text: string) => {
-    setInputValue(prev => prev + (prev ? ' ' : '') + text);
-    setLiveTranscript('');
+  // Voice assistant integration
+  const handleVoiceAnswer = useCallback((answer: string) => {
+    setInputValue(answer);
   }, []);
 
-  const handleInterimTranscript = useCallback((text: string) => {
-    setLiveTranscript(text);
-  }, []);
-
-  const { 
-    isListening, 
-    isSpeaking, 
-    isSupported: voiceSupported,
-    interimText,
-    startListening, 
-    stopListening, 
-    speak, 
-    stopSpeaking,
-    setAutoListen 
-  } = useVoiceChat({
+  const voiceAssistant = useVoiceAssistant({
     language,
-    onTranscript: handleVoiceTranscript,
-    onInterimTranscript: handleInterimTranscript,
-    autoListenAfterSpeak: true,
+    onAnswerComplete: handleVoiceAnswer,
+    silenceTimeout: 3000,
   });
+
+  // Listen for voice submit events
+  useEffect(() => {
+    const handleVoiceSubmit = () => {
+      if (inputValue.trim()) {
+        handleSubmitAnswer();
+      }
+    };
+    window.addEventListener('voice-submit', handleVoiceSubmit);
+    return () => window.removeEventListener('voice-submit', handleVoiceSubmit);
+  }, [inputValue]);
 
   const categoryQuestions = interviewQuestions.filter(q => q.category === currentCategory);
   const currentQuestion = categoryQuestions[currentQuestionIndex];
@@ -196,15 +190,8 @@ export function IntakeWizard() {
         timestamp: new Date().toISOString(),
         questionKey: currentQuestion.key,
       }]);
-
-      // Speak the question if voice is enabled
-      if (voiceEnabled && !isSpeaking) {
-        // Clean message for speech (remove emoji)
-        const speechText = message.replace(/💡/g, '').replace(/\n\n/g, '. ');
-        speak(speechText);
-      }
     }
-  }, [currentCategory, currentQuestionIndex, currentQuestion, language, voiceEnabled]);
+  }, [currentCategory, currentQuestionIndex, currentQuestion, language]);
 
   const validateWithAI = async (questionKey: string, questionText: string, answer: string) => {
     setIsValidating(true);
@@ -236,11 +223,6 @@ export function IntakeWizard() {
 
   const handleSubmitAnswer = async () => {
     if (!inputValue.trim() || !currentQuestion) return;
-
-    // Stop listening while processing
-    if (isListening) {
-      stopListening();
-    }
 
     const userMessage = inputValue;
     
@@ -288,10 +270,10 @@ export function IntakeWizard() {
         timestamp: new Date().toISOString(),
       }]);
 
-      // Speak follow-up if voice enabled
-      if (voiceEnabled) {
+      // If voice mode is active, speak the follow-up
+      if (voiceAssistant.state !== 'idle') {
         const speechText = followUpMessage.replace(/🤔|💡/g, '').replace(/\n\n/g, '. ');
-        speak(speechText);
+        voiceAssistant.startWithQuestion(speechText);
       }
       
       // Save partial answer
@@ -328,11 +310,6 @@ export function IntakeWizard() {
         message: feedbackMessage,
         timestamp: new Date().toISOString(),
       }]);
-
-      // Speak feedback if voice enabled
-      if (voiceEnabled) {
-        speak(qualityMessage);
-      }
     }
 
     setIsProcessing(false);
@@ -341,12 +318,32 @@ export function IntakeWizard() {
     setTimeout(() => {
       if (currentQuestionIndex < categoryQuestions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
+        // If voice mode, speak next question
+        if (voiceAssistant.state !== 'idle') {
+          const nextQ = categoryQuestions[currentQuestionIndex + 1];
+          if (nextQ) {
+            setTimeout(() => {
+              voiceAssistant.startWithQuestion(getQuestionText(nextQ));
+            }, 500);
+          }
+        }
       } else {
         // Move to next category
         const categoryIndex = categories.indexOf(currentCategory as typeof categories[number]);
         if (categoryIndex < categories.length - 1) {
           setCurrentCategory(categories[categoryIndex + 1]);
           setCurrentQuestionIndex(0);
+          // If voice mode, speak next category intro
+          if (voiceAssistant.state !== 'idle') {
+            setTimeout(() => {
+              const nextCat = categories[categoryIndex + 1];
+              const nextCatQuestions = interviewQuestions.filter(q => q.category === nextCat);
+              if (nextCatQuestions[0]) {
+                const intro = t('wizard.categoryIntro').replace('{category}', getCategoryLabel(nextCat).toLowerCase());
+                voiceAssistant.startWithQuestion(`${intro} ${getQuestionText(nextCatQuestions[0])}`);
+              }
+            }, 500);
+          }
         } else {
           // All done - show completion message
           const doneMessage = `✅ ${t('wizard.allDone')}`;
@@ -357,9 +354,9 @@ export function IntakeWizard() {
             message: doneMessage,
             timestamp: new Date().toISOString(),
           }]);
-
-          if (voiceEnabled) {
-            speak(t('wizard.allDone'));
+          // Stop voice assistant
+          if (voiceAssistant.state !== 'idle') {
+            voiceAssistant.stopAssistant();
           }
         }
       }
@@ -399,27 +396,19 @@ export function IntakeWizard() {
     }, 300);
   };
 
-  const toggleVoice = () => {
-    if (voiceEnabled) {
-      stopListening();
-      stopSpeaking();
-      setAutoListen(false);
-      setVoiceEnabled(false);
-      setLiveTranscript('');
-      toast.info(language === 'de' ? 'Sprachmodus deaktiviert' : 'Voice mode disabled');
-    } else {
-      setVoiceEnabled(true);
-      setAutoListen(true);
+  // Toggle voice assistant
+  const toggleVoiceAssistant = () => {
+    if (voiceAssistant.state !== 'idle') {
+      voiceAssistant.stopAssistant();
+      toast.info(language === 'de' ? 'Sprachassistent beendet' : 'Voice assistant stopped');
+    } else if (currentQuestion) {
+      const questionText = getQuestionText(currentQuestion);
+      voiceAssistant.startWithQuestion(questionText);
       toast.success(
         language === 'de' 
-          ? 'Sprachmodus aktiviert - Ich stelle jetzt Fragen per Audio!' 
-          : 'Voice mode enabled - I will ask questions via audio!'
+          ? 'Sprachassistent gestartet - Lehnen Sie sich zurück!' 
+          : 'Voice assistant started - Sit back and relax!'
       );
-      // Speak the current question
-      if (currentQuestion) {
-        const questionText = getQuestionText(currentQuestion);
-        speak(questionText);
-      }
     }
   };
 
@@ -505,6 +494,44 @@ export function IntakeWizard() {
     }
   };
 
+  // Get voice state indicator
+  const getVoiceStateInfo = (): { icon: React.ReactNode; text: string; color: string } => {
+    switch (voiceAssistant.state) {
+      case 'speaking':
+        return { 
+          icon: <Mic className="h-4 w-4" />, 
+          text: language === 'de' ? 'Ich spreche...' : 'Speaking...', 
+          color: 'bg-primary text-primary-foreground' 
+        };
+      case 'listening':
+        return { 
+          icon: <Mic className="h-4 w-4 animate-pulse" />, 
+          text: language === 'de' ? 'Ich höre zu...' : 'Listening...', 
+          color: 'bg-destructive text-destructive-foreground' 
+        };
+      case 'confirming':
+        return { 
+          icon: <HelpCircle className="h-4 w-4" />, 
+          text: language === 'de' ? 'Noch etwas?' : 'Anything else?', 
+          color: 'bg-warning text-warning-foreground' 
+        };
+      case 'processing':
+        return { 
+          icon: <Loader2 className="h-4 w-4 animate-spin" />, 
+          text: language === 'de' ? 'Verarbeite...' : 'Processing...', 
+          color: 'bg-muted text-muted-foreground' 
+        };
+      default:
+        return { 
+          icon: <MicOff className="h-4 w-4" />, 
+          text: '', 
+          color: '' 
+        };
+    }
+  };
+
+  const voiceStateInfo = getVoiceStateInfo();
+
   return (
     <>
       {/* Restore Dialog */}
@@ -587,86 +614,6 @@ export function IntakeWizard() {
             </CardContent>
           </Card>
 
-          {/* Voice Mode Toggle */}
-          {voiceSupported && (
-            <Card className={cn(
-              "border-2 transition-all duration-300",
-              voiceEnabled ? "border-primary bg-primary/5 shadow-lg" : "border-border"
-            )}>
-              <CardContent className="pt-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {voiceEnabled ? (
-                      <div className="relative">
-                        <Mic className="h-6 w-6 text-primary" />
-                        {isListening && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full animate-pulse" />
-                        )}
-                      </div>
-                    ) : (
-                      <MicOff className="h-5 w-5 text-muted-foreground" />
-                    )}
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">
-                        {language === 'de' ? 'Voice Interview' : 'Voice Interview'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {voiceEnabled 
-                          ? (isSpeaking 
-                              ? (language === 'de' ? '🔊 Ich spreche...' : '🔊 Speaking...') 
-                              : (isListening 
-                                  ? (language === 'de' ? '🎤 Ich höre zu...' : '🎤 Listening...') 
-                                  : (language === 'de' ? '✨ Bereit' : '✨ Ready')))
-                          : (language === 'de' ? 'Wie ein echtes Interview' : 'Like a real interview')}
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant={voiceEnabled ? "destructive" : "default"} 
-                    size="sm"
-                    onClick={toggleVoice}
-                    className="gap-2"
-                  >
-                    {voiceEnabled ? (
-                      <>
-                        <VolumeX className="h-4 w-4" />
-                        {language === 'de' ? 'Stopp' : 'Stop'}
-                      </>
-                    ) : (
-                      <>
-                        <Volume2 className="h-4 w-4" />
-                        {language === 'de' ? 'Starten' : 'Start'}
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Live Transcription Display */}
-                {voiceEnabled && (liveTranscript || interimText) && (
-                  <div className="p-3 bg-muted/50 rounded-lg border border-border/50">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {language === 'de' ? '📝 Live-Transkription:' : '📝 Live transcription:'}
-                    </p>
-                    <p className="text-sm italic text-foreground/80">
-                      "{liveTranscript || interimText}"
-                    </p>
-                  </div>
-                )}
-
-                {voiceEnabled && isListening && !liveTranscript && !interimText && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="flex gap-1">
-                      <span className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                    <span>{language === 'de' ? 'Sprechen Sie jetzt...' : 'Speak now...'}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
           {/* AI Assistant Info */}
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="pt-4">
@@ -727,10 +674,10 @@ export function IntakeWizard() {
                       {t('wizard.aiChecking')}
                     </Badge>
                   )}
-                  {isListening && (
-                    <Badge variant="default" className="gap-1 bg-primary">
-                      <Mic className="h-3 w-3 animate-pulse" />
-                      {language === 'de' ? 'Höre...' : 'Listening...'}
+                  {voiceAssistant.state !== 'idle' && (
+                    <Badge className={cn("gap-1", voiceStateInfo.color)}>
+                      {voiceStateInfo.icon}
+                      {voiceStateInfo.text}
                     </Badge>
                   )}
                   <Badge variant="outline">{getCategoryLabel(currentCategory)}</Badge>
@@ -766,6 +713,53 @@ export function IntakeWizard() {
                   </div>
                 </div>
               ))}
+
+              {/* Live transcript while listening */}
+              {voiceAssistant.state === 'listening' && (voiceAssistant.currentTranscript || voiceAssistant.interimText) && (
+                <div className="flex justify-end">
+                  <div className="max-w-[80%] p-3 text-sm rounded-lg bg-primary/20 text-foreground border-2 border-dashed border-primary">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {language === 'de' ? '📝 Live-Mitschrift:' : '📝 Live transcript:'}
+                    </p>
+                    {voiceAssistant.currentTranscript}
+                    {voiceAssistant.interimText && (
+                      <span className="opacity-60"> {voiceAssistant.interimText}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Confirmation UI */}
+              {voiceAssistant.state === 'confirming' && (
+                <div className="flex justify-start">
+                  <div className="bg-muted p-3 rounded-lg space-y-3">
+                    <p className="text-sm">
+                      {language === 'de' 
+                        ? 'Ist das vollständig, oder möchten Sie noch etwas hinzufügen?' 
+                        : 'Is that complete, or would you like to add something?'}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => voiceAssistant.confirmAnswer()}
+                        className="gap-1"
+                      >
+                        <Check className="h-3 w-3" />
+                        {language === 'de' ? 'Fertig' : 'Done'}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => voiceAssistant.continueListening()}
+                        className="gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        {language === 'de' ? 'Mehr hinzufügen' : 'Add more'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {(isProcessing || isValidating) && (
                 <div className="flex justify-start">
@@ -837,15 +831,20 @@ export function IntakeWizard() {
                   />
                 )}
                 
-                {/* Voice toggle button in input area */}
-                {voiceSupported && (
+                {/* Voice Assistant Button */}
+                {voiceAssistant.isSupported && (
                   <Button
-                    variant={isListening ? "default" : "outline"}
+                    variant={voiceAssistant.state !== 'idle' ? "destructive" : "outline"}
                     size="icon"
                     className="flex-shrink-0"
-                    onClick={() => isListening ? stopListening() : startListening()}
+                    onClick={toggleVoiceAssistant}
+                    title={language === 'de' ? 'Sprachassistent' : 'Voice Assistant'}
                   >
-                    {isListening ? <Mic className="h-4 w-4 animate-pulse" /> : <MicOff className="h-4 w-4" />}
+                    {voiceAssistant.state !== 'idle' ? (
+                      <X className="h-4 w-4" />
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
                   </Button>
                 )}
                 
