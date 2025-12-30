@@ -1,7 +1,7 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,9 +9,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -24,30 +24,36 @@ import {
   ChevronDown,
   UserCog,
   X,
-} from 'lucide-react';
-import type { UserRole } from '@/types/intake';
+} from "lucide-react";
+import type { UserRole } from "@/types/intake";
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['requester', 'architect', 'engineer_lead', 'admin'] },
-  { name: 'New Intake', href: '/intake/new', icon: PlusCircle, roles: ['requester', 'architect', 'admin'] },
-  { name: 'Architect Queue', href: '/architect', icon: ClipboardCheck, roles: ['architect', 'admin'] },
-  { name: 'Audit Log', href: '/audit', icon: FileText, roles: ['admin'] },
-  { name: 'Policies', href: '/admin/policies', icon: Shield, roles: ['admin'] },
-  { name: 'Integrations', href: '/admin/integrations', icon: Settings, roles: ['admin'] },
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    roles: ["requester", "architect", "engineer_lead", "admin"],
+  },
+  { name: "New Intake", href: "/intake/new", icon: PlusCircle, roles: ["requester", "architect", "admin"] },
+  { name: "Config", href: "/configuration", icon: PlusCircle, roles: ["architect", "admin"] },
+  { name: "Architect Queue", href: "/architect", icon: ClipboardCheck, roles: ["architect", "admin"] },
+  { name: "Audit Log", href: "/audit", icon: FileText, roles: ["admin"] },
+  { name: "Policies", href: "/admin/policies", icon: Shield, roles: ["admin"] },
+  { name: "Integrations", href: "/admin/integrations", icon: Settings, roles: ["admin"] },
 ];
 
 const roleLabels: Record<UserRole, string> = {
-  requester: 'Requester',
-  architect: 'Architect',
-  engineer_lead: 'Engineer Lead',
-  admin: 'Admin',
+  requester: "Requester",
+  architect: "Architect",
+  engineer_lead: "Engineer Lead",
+  admin: "Admin",
 };
 
-const roleBadgeVariants: Record<UserRole, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  requester: 'secondary',
-  architect: 'default',
-  engineer_lead: 'outline',
-  admin: 'destructive',
+const roleBadgeVariants: Record<UserRole, "default" | "secondary" | "outline" | "destructive"> = {
+  requester: "secondary",
+  architect: "default",
+  engineer_lead: "outline",
+  admin: "destructive",
 };
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -59,13 +65,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const visibleNavigation = navigation.filter(item => 
-    item.roles.includes(user.role)
-  );
+  const visibleNavigation = navigation.filter((item) => item.roles.includes(user.role));
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
@@ -77,9 +81,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="text-sm font-medium">
             Sie sehen die App als <strong>{roleLabels[user.role]}</strong>
           </span>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={stopImpersonating}
             className="h-6 gap-1 bg-background text-foreground hover:bg-muted"
           >
@@ -99,20 +103,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               <span className="text-lg font-semibold text-foreground">Intake Router</span>
             </Link>
-            
+
             <nav className="hidden md:flex items-center gap-1">
               {visibleNavigation.map((item) => {
-                const isActive = location.pathname === item.href || 
-                  (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
+                const isActive =
+                  location.pathname === item.href ||
+                  (item.href !== "/dashboard" && location.pathname.startsWith(item.href));
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={cn(
-                      'flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors',
+                      "flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors",
                       isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                     )}
                   >
                     <item.icon className="h-4 w-4" />
@@ -129,9 +134,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
-                    <Badge variant={roleBadgeVariants[user.role]}>
-                      {roleLabels[user.role]}
-                    </Badge>
+                    <Badge variant={roleBadgeVariants[user.role]}>{roleLabels[user.role]}</Badge>
                     {isImpersonating && <span className="text-xs text-muted-foreground">(Impersonation)</span>}
                     <ChevronDown className="h-3 w-3" />
                   </Button>
@@ -143,11 +146,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <DropdownMenuItem
                       key={role}
                       onClick={() => switchRole(role as UserRole)}
-                      className={cn(user.role === role && 'bg-accent')}
+                      className={cn(user.role === role && "bg-accent")}
                     >
                       {label}
                       {role === user.actualRole && (
-                        <Badge variant="outline" className="ml-2 text-xs">Ihre Rolle</Badge>
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          Ihre Rolle
+                        </Badge>
                       )}
                     </DropdownMenuItem>
                   ))}
@@ -156,11 +161,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Non-admin role badge */}
-            {!isAdmin && (
-              <Badge variant={roleBadgeVariants[user.role]}>
-                {roleLabels[user.role]}
-              </Badge>
-            )}
+            {!isAdmin && <Badge variant={roleBadgeVariants[user.role]}>{roleLabels[user.role]}</Badge>}
 
             {/* User Menu */}
             <DropdownMenu>
@@ -169,12 +170,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatarUrl} />
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      {user.displayName.split(' ').map(n => n[0]).join('')}
+                      {user.displayName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline text-sm font-medium">
-                    {user.displayName}
-                  </span>
+                  <span className="hidden md:inline text-sm font-medium">{user.displayName}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -185,11 +187,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <User className="mr-2 h-4 w-4" />
                   Profil
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <Settings className="mr-2 h-4 w-4" />
                   Einstellungen
                 </DropdownMenuItem>
@@ -205,9 +207,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }
