@@ -7,6 +7,7 @@ export type Intake = Tables<'intakes'>;
 export type Transcript = Tables<'transcripts'>;
 export type SpecDocument = Tables<'spec_documents'>;
 export type RoutingScore = Tables<'routing_scores'>;
+export type JiraExport = Tables<'jira_exports'>;
 
 export function useIntakes() {
   const { user } = useAuth();
@@ -103,6 +104,28 @@ export function useRoutingScore(intakeId: string | undefined) {
       return data as RoutingScore | null;
     },
     enabled: !!intakeId,
+  });
+}
+
+export function useJiraExport(intakeId: string | undefined) {
+  return useQuery({
+    queryKey: ['jira-export', intakeId],
+    queryFn: async () => {
+      if (!intakeId) return null;
+      
+      const { data, error } = await supabase
+        .from('jira_exports')
+        .select('*')
+        .eq('intake_id', intakeId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as JiraExport | null;
+    },
+    enabled: !!intakeId,
+    refetchInterval: 5000, // Poll for updates every 5 seconds
   });
 }
 
@@ -249,6 +272,11 @@ export function useExportToJira() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
       
+      // Store Jira base URL in localStorage for later use
+      if (data.jiraBaseUrl) {
+        localStorage.setItem('jira_base_url', data.jiraBaseUrl);
+      }
+      
       // Update intake status to exported
       await supabase
         .from('intakes')
@@ -260,6 +288,7 @@ export function useExportToJira() {
     onSuccess: (_, intakeId) => {
       queryClient.invalidateQueries({ queryKey: ['intake', intakeId] });
       queryClient.invalidateQueries({ queryKey: ['intakes'] });
+      queryClient.invalidateQueries({ queryKey: ['jira-export', intakeId] });
     },
   });
 }
