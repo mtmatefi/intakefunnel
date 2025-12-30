@@ -582,6 +582,36 @@ serve(async (req) => {
           } else {
             const errorText = await updateResponse.text();
             console.error("Jira update error:", updateResponse.status, errorText);
+            
+            // Parse Jira error for user-friendly message
+            let errorMessage = `Jira Update fehlgeschlagen (${updateResponse.status})`;
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.errorMessages?.length) {
+                errorMessage = errorJson.errorMessages.join(", ");
+              } else if (errorJson.errors) {
+                errorMessage = Object.values(errorJson.errors).join(", ");
+              }
+            } catch { 
+              errorMessage = errorText || errorMessage;
+            }
+            
+            // Save error to jira_exports
+            await supabase
+              .from("jira_exports")
+              .upsert({
+                intake_id: intakeId,
+                jpd_issue_key: existingJpdKey,
+                status: 'error',
+                logs: [`✗ Update fehlgeschlagen: ${errorMessage}`],
+              }, { onConflict: 'intake_id' });
+            
+            jiraResult = { 
+              jpdIssueKey: existingJpdKey, 
+              jiraBaseUrl: baseUrl, 
+              action: 'update_failed', 
+              error: errorMessage 
+            };
           }
         } else {
           // CREATE new Jira ticket
@@ -631,6 +661,36 @@ serve(async (req) => {
           } else {
             const errorText = await jiraResponse.text();
             console.error("Jira API error:", jiraResponse.status, errorText);
+            
+            // Parse Jira error for user-friendly message
+            let errorMessage = `Jira API Error (${jiraResponse.status})`;
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.errorMessages?.length) {
+                errorMessage = errorJson.errorMessages.join(", ");
+              } else if (errorJson.errors) {
+                errorMessage = Object.entries(errorJson.errors)
+                  .map(([key, val]) => `${key}: ${val}`)
+                  .join(", ");
+              }
+            } catch { 
+              errorMessage = errorText || errorMessage;
+            }
+            
+            // Save error to jira_exports
+            await supabase
+              .from("jira_exports")
+              .upsert({
+                intake_id: intakeId,
+                status: 'error',
+                logs: [`✗ Ticket-Erstellung fehlgeschlagen: ${errorMessage}`],
+              }, { onConflict: 'intake_id' });
+            
+            jiraResult = { 
+              jiraBaseUrl: baseUrl, 
+              action: 'create_failed', 
+              error: errorMessage 
+            };
           }
         }
       } else {

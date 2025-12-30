@@ -33,7 +33,7 @@ import {
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { SpecAmendmentDialog } from '@/components/spec/SpecAmendmentDialog';
-
+import { JiraSyncPanel } from '@/components/jira/JiraSyncPanel';
 export default function IntakeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -208,78 +208,13 @@ export default function IntakeDetailPage() {
           </div>
         </div>
 
-        {/* Jira Export Card */}
-        {(jiraExport || intake.jpd_issue_key) && (
-          <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 flex items-center justify-center bg-primary text-primary-foreground">
-                    <ExternalLink className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Jira</p>
-                    <p className="text-lg font-bold">
-                      {jiraExport?.status
-                        ? (jiraExport.status === 'success' ? 'Erfolgreich verknüpft' : jiraExport.status)
-                        : 'Verknüpft'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {jiraExport?.epic_key && (
-                    <Button variant="outline" asChild>
-                      <a 
-                        href={`${localStorage.getItem('jira_base_url') || 'https://prodive.atlassian.net'}/browse/${jiraExport.epic_key}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gap-2"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Epic: {jiraExport.epic_key}
-                      </a>
-                    </Button>
-                  )}
-                  {(jiraExport?.jpd_issue_key || intake.jpd_issue_key) && (
-                    <Button variant="outline" asChild>
-                      <a 
-                        href={`${localStorage.getItem('jira_base_url') || 'https://prodive.atlassian.net'}/browse/${jiraExport?.jpd_issue_key || intake.jpd_issue_key}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gap-2"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        JPD: {jiraExport?.jpd_issue_key || intake.jpd_issue_key}
-                      </a>
-                    </Button>
-                  )}
-                  {jiraExport?.jsm_request_key && (
-                    <Button variant="outline" asChild>
-                      <a 
-                        href={`${localStorage.getItem('jira_base_url') || 'https://prodive.atlassian.net'}/browse/${jiraExport.jsm_request_key}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gap-2"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        JSM: {jiraExport.jsm_request_key}
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {jiraExport.logs && jiraExport.logs.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-1">Export Logs:</p>
-                  <ul className="text-xs text-muted-foreground space-y-0.5">
-                    {jiraExport.logs.map((log, i) => (
-                      <li key={i}>• {log}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Jira Sync Panel - Auto-refresh every 30s */}
+        {id && (intake.jpd_issue_key || jiraExport) && (
+          <JiraSyncPanel 
+            intakeId={id} 
+            jpdIssueKey={intake.jpd_issue_key}
+            autoRefreshInterval={30000}
+          />
         )}
 
         {/* Routing Summary Card */}
