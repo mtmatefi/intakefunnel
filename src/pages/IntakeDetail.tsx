@@ -354,19 +354,7 @@ export default function IntakeDetailPage() {
                     )}
                   </div>
                 )}
-                    <Button onClick={handleGenerateSpec} disabled={generateSpec.isPending}>
-                      {generateSpec.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                      )}
-                      Generate with AI
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Problem & Goals */}
                   <Card>
