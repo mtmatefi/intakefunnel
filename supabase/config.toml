@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.validate-intake]
 verify_jwt = false
+
+[functions.jira-sync]
+verify_jwt = false
