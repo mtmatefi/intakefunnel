@@ -28,7 +28,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const baseUrl = JIRA_BASE_URL.replace(/\/$/, '');
+    const rawBaseUrl = JIRA_BASE_URL.trim().replace(/\/$/, '');
+    const baseUrl = /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : `https://${rawBaseUrl}`;
     const authHeader = 'Basic ' + btoa(`${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}`);
 
     const { intakeId } = await req.json();

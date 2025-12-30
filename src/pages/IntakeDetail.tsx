@@ -91,13 +91,22 @@ export default function IntakeDetailPage() {
     
     try {
       toast.loading('Generating specification with AI...', { id: 'generate-spec' });
-      await generateSpec.mutateAsync(id);
-      toast.success('Specification generated!', { 
+      const result = await generateSpec.mutateAsync(id);
+
+      // Persist Jira base URL for links
+      const jiraBaseUrl = result?.jira?.jiraBaseUrl as string | undefined;
+      if (jiraBaseUrl) {
+        localStorage.setItem('jira_base_url', jiraBaseUrl);
+      }
+
+      toast.success('Specification generated!', {
         id: 'generate-spec',
-        description: 'AI has analyzed the transcript and created a structured spec',
+        description: result?.jira?.jpdIssueKey
+          ? `Jira: ${result.jira.jpdIssueKey} (${result.jira.action})`
+          : 'AI has analyzed the transcript and created a structured spec',
       });
     } catch (error) {
-      toast.error('Failed to generate specification', { 
+      toast.error('Failed to generate specification', {
         id: 'generate-spec',
         description: error instanceof Error ? error.message : 'Unknown error',
       });
@@ -144,6 +153,16 @@ export default function IntakeDetailPage() {
             </Button>
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-2 mb-1 flex-wrap">
+                {intake.jpd_issue_key && (
+                  <a
+                    href={`${localStorage.getItem('jira_base_url') || 'https://prodive.atlassian.net'}/browse/${intake.jpd_issue_key}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-sm text-primary hover:underline flex-shrink-0"
+                  >
+                    {intake.jpd_issue_key}
+                  </a>
+                )}
                 <h1 className="text-2xl font-bold text-foreground break-words">{intake.title}</h1>
                 <Badge variant={intake.status === 'pending_approval' ? 'default' : 'secondary'} className="flex-shrink-0">
                   {intake.status.replace(/_/g, ' ')}
@@ -190,7 +209,7 @@ export default function IntakeDetailPage() {
         </div>
 
         {/* Jira Export Card */}
-        {jiraExport && (
+        {(jiraExport || intake.jpd_issue_key) && (
           <Card className="border-primary/50 bg-primary/5">
             <CardContent className="p-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -199,17 +218,19 @@ export default function IntakeDetailPage() {
                     <ExternalLink className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Jira Export</p>
+                    <p className="text-sm text-muted-foreground">Jira</p>
                     <p className="text-lg font-bold">
-                      {jiraExport.status === 'success' ? 'Erfolgreich exportiert' : jiraExport.status}
+                      {jiraExport?.status
+                        ? (jiraExport.status === 'success' ? 'Erfolgreich verknüpft' : jiraExport.status)
+                        : 'Verknüpft'}
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {jiraExport.epic_key && (
+                  {jiraExport?.epic_key && (
                     <Button variant="outline" asChild>
                       <a 
-                        href={`${localStorage.getItem('jira_base_url') || 'https://jira.atlassian.net'}/browse/${jiraExport.epic_key}`}
+                        href={`${localStorage.getItem('jira_base_url') || 'https://prodive.atlassian.net'}/browse/${jiraExport.epic_key}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="gap-2"
@@ -219,23 +240,23 @@ export default function IntakeDetailPage() {
                       </a>
                     </Button>
                   )}
-                  {jiraExport.jpd_issue_key && (
+                  {(jiraExport?.jpd_issue_key || intake.jpd_issue_key) && (
                     <Button variant="outline" asChild>
                       <a 
-                        href={`${localStorage.getItem('jira_base_url') || 'https://jira.atlassian.net'}/browse/${jiraExport.jpd_issue_key}`}
+                        href={`${localStorage.getItem('jira_base_url') || 'https://prodive.atlassian.net'}/browse/${jiraExport?.jpd_issue_key || intake.jpd_issue_key}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="gap-2"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        JPD: {jiraExport.jpd_issue_key}
+                        JPD: {jiraExport?.jpd_issue_key || intake.jpd_issue_key}
                       </a>
                     </Button>
                   )}
-                  {jiraExport.jsm_request_key && (
+                  {jiraExport?.jsm_request_key && (
                     <Button variant="outline" asChild>
                       <a 
-                        href={`${localStorage.getItem('jira_base_url') || 'https://jira.atlassian.net'}/browse/${jiraExport.jsm_request_key}`}
+                        href={`${localStorage.getItem('jira_base_url') || 'https://prodive.atlassian.net'}/browse/${jiraExport.jsm_request_key}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="gap-2"
