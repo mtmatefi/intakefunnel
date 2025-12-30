@@ -213,6 +213,7 @@ export function useGenerateSpec() {
       queryClient.invalidateQueries({ queryKey: ['spec', intakeId] });
       queryClient.invalidateQueries({ queryKey: ['intake', intakeId] });
       queryClient.invalidateQueries({ queryKey: ['intakes'] });
+      queryClient.invalidateQueries({ queryKey: ['jira-export', intakeId] });
     },
   });
 }

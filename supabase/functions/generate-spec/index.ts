@@ -472,7 +472,8 @@ serve(async (req) => {
       const JIRA_USER_EMAIL = Deno.env.get('JIRA_USER_EMAIL');
       
       if (JIRA_API_TOKEN && JIRA_BASE_URL && JIRA_USER_EMAIL) {
-        const baseUrl = JIRA_BASE_URL.replace(/\/$/, '');
+        const rawBaseUrl = JIRA_BASE_URL.trim().replace(/\/$/, "");
+        const baseUrl = /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : `https://${rawBaseUrl}`;
         const authHeader = 'Basic ' + btoa(`${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}`);
         
         // Get intake with existing JPD key

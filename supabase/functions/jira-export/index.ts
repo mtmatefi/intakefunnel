@@ -49,7 +49,8 @@ serve(async (req) => {
     }
 
     // Ensure base URL has correct format
-    const baseUrl = JIRA_BASE_URL.replace(/\/$/, '');
+    const rawBaseUrl = JIRA_BASE_URL.trim().replace(/\/$/, '');
+    const baseUrl = /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : `https://${rawBaseUrl}`;
     const authHeader = 'Basic ' + btoa(`${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}`);
 
     const { intakeId, spec, routing, projectKeys }: JiraExportRequest = await req.json();
