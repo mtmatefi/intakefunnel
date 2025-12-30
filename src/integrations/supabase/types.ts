@@ -82,6 +82,83 @@ export type Database = {
         }
         Relationships: []
       }
+      followup_requests: {
+        Row: {
+          answered_at: string | null
+          created_at: string
+          id: string
+          intake_id: string
+          message: string | null
+          questions: Json
+          requested_by: string
+          status: string
+        }
+        Insert: {
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          intake_id: string
+          message?: string | null
+          questions?: Json
+          requested_by: string
+          status?: string
+        }
+        Update: {
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          intake_id?: string
+          message?: string | null
+          questions?: Json
+          requested_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_requests_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: false
+            referencedRelation: "intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guidelines: {
+        Row: {
+          content_markdown: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content_markdown: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          content_markdown?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       intakes: {
         Row: {
           category: string | null
@@ -118,6 +195,42 @@ export type Database = {
           title?: string
           updated_at?: string
           value_stream?: string | null
+        }
+        Relationships: []
+      }
+      interview_topics: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_required: boolean
+          name: string
+          sample_questions: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_required?: boolean
+          name: string
+          sample_questions?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_required?: boolean
+          name?: string
+          sample_questions?: string[] | null
+          updated_at?: string
         }
         Relationships: []
       }
