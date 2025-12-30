@@ -464,7 +464,7 @@ serve(async (req) => {
       console.log("Routing score saved:", savedRouting.id);
     }
 
-    // Auto-create Jira Product Discovery ticket
+    // Auto-create or update Jira Product Discovery ticket
     let jiraResult = null;
     try {
       const JIRA_API_TOKEN = Deno.env.get('JIRA_API_TOKEN');
@@ -472,108 +472,171 @@ serve(async (req) => {
       const JIRA_USER_EMAIL = Deno.env.get('JIRA_USER_EMAIL');
       
       if (JIRA_API_TOKEN && JIRA_BASE_URL && JIRA_USER_EMAIL) {
-        console.log("Auto-creating Jira ticket...");
-        
         const baseUrl = JIRA_BASE_URL.replace(/\/$/, '');
         const authHeader = 'Basic ' + btoa(`${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}`);
         
-        // Get intake title for better context
+        // Get intake with existing JPD key
         const { data: intakeData } = await supabase
           .from("intakes")
-          .select("title")
+          .select("title, jpd_issue_key")
           .eq("id", intakeId)
           .single();
         
         const issueTitle = intakeData?.title || structuredSpec.problemStatement?.substring(0, 100) || "New Intake Request";
+        const existingJpdKey = intakeData?.jpd_issue_key;
         
-        // Create JPD Idea
-        const jpdPayload = {
-          fields: {
-            project: { key: "IN" }, // Default JPD project key
-            summary: `[${routingResult.path}] ${issueTitle}`,
-            description: {
-              type: 'doc',
-              version: 1,
-              content: [
-                {
-                  type: 'paragraph',
-                  content: [{ type: 'text', text: `Problem: ${structuredSpec.problemStatement}` }]
-                },
-                {
-                  type: 'heading',
-                  attrs: { level: 2 },
-                  content: [{ type: 'text', text: 'Ziele' }]
-                },
-                {
-                  type: 'bulletList',
-                  content: (structuredSpec.goals || []).map((goal: string) => ({
-                    type: 'listItem',
-                    content: [{ type: 'paragraph', content: [{ type: 'text', text: goal }] }]
-                  }))
-                },
-                {
-                  type: 'heading',
-                  attrs: { level: 2 },
-                  content: [{ type: 'text', text: 'Benutzer' }]
-                },
-                {
-                  type: 'bulletList',
-                  content: (structuredSpec.users || []).map((u: any) => ({
-                    type: 'listItem',
-                    content: [{ type: 'paragraph', content: [{ type: 'text', text: `${u.persona}: ${u.count} (${u.techLevel})` }] }]
-                  }))
-                },
-                {
-                  type: 'paragraph',
-                  content: [{ type: 'text', text: `Routing: ${routingResult.path} (Score: ${routingResult.score})` }]
-                }
-              ]
+        // Build issue content
+        const issueContent = {
+          type: 'doc',
+          version: 1,
+          content: [
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: `Problem: ${structuredSpec.problemStatement}` }]
             },
-            issuetype: { name: 'Idea' },
-            labels: ['ai-intake-router', routingResult.path.toLowerCase().replace('_', '-')],
-          }
+            {
+              type: 'heading',
+              attrs: { level: 2 },
+              content: [{ type: 'text', text: 'Ziele' }]
+            },
+            {
+              type: 'bulletList',
+              content: (structuredSpec.goals || []).map((goal: string) => ({
+                type: 'listItem',
+                content: [{ type: 'paragraph', content: [{ type: 'text', text: goal }] }]
+              }))
+            },
+            {
+              type: 'heading',
+              attrs: { level: 2 },
+              content: [{ type: 'text', text: 'Benutzer' }]
+            },
+            {
+              type: 'bulletList',
+              content: (structuredSpec.users || []).map((u: any) => ({
+                type: 'listItem',
+                content: [{ type: 'paragraph', content: [{ type: 'text', text: `${u.persona}: ${u.count} (${u.techLevel})` }] }]
+              }))
+            },
+            {
+              type: 'heading',
+              attrs: { level: 2 },
+              content: [{ type: 'text', text: 'Routing' }]
+            },
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: `Pfad: ${routingResult.path} (Score: ${routingResult.score})` }]
+            },
+            {
+              type: 'heading',
+              attrs: { level: 2 },
+              content: [{ type: 'text', text: 'Risiken' }]
+            },
+            {
+              type: 'bulletList',
+              content: (structuredSpec.risks || []).slice(0, 5).map((r: any) => ({
+                type: 'listItem',
+                content: [{ type: 'paragraph', content: [{ type: 'text', text: `${r.description} (${r.probability}/${r.impact})` }] }]
+              }))
+            }
+          ]
         };
+        
+        if (existingJpdKey) {
+          // UPDATE existing Jira ticket
+          console.log(`Updating existing JPD ticket: ${existingJpdKey}`);
+          
+          const updatePayload = {
+            fields: {
+              summary: `[${routingResult.path}] ${issueTitle}`,
+              description: issueContent,
+              labels: ['ai-intake-router', routingResult.path.toLowerCase().replace('_', '-')],
+            }
+          };
 
-        const jiraResponse = await fetch(`${baseUrl}/rest/api/3/issue`, {
-          method: 'POST',
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify(jpdPayload),
-        });
+          const updateResponse = await fetch(`${baseUrl}/rest/api/3/issue/${existingJpdKey}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify(updatePayload),
+          });
 
-        if (jiraResponse.ok) {
-          const jiraData = await jiraResponse.json();
-          console.log("Created JPD ticket:", jiraData.key);
-          
-          // Update intake with JPD key
-          await supabase
-            .from("intakes")
-            .update({ jpd_issue_key: jiraData.key })
-            .eq("id", intakeId);
-          
-          // Save to jira_exports
-          await supabase
-            .from("jira_exports")
-            .upsert({
-              intake_id: intakeId,
-              jpd_issue_key: jiraData.key,
-              status: 'success',
-              logs: [`✓ Created JPD Idea: ${jiraData.key}`],
-            }, { onConflict: 'intake_id' });
-          
-          jiraResult = { jpdIssueKey: jiraData.key, jiraBaseUrl: baseUrl };
+          if (updateResponse.ok || updateResponse.status === 204) {
+            console.log(`Updated JPD ticket: ${existingJpdKey}`);
+            
+            // Update jira_exports log
+            await supabase
+              .from("jira_exports")
+              .upsert({
+                intake_id: intakeId,
+                jpd_issue_key: existingJpdKey,
+                status: 'success',
+                logs: [`✓ Updated JPD Idea: ${existingJpdKey}`],
+              }, { onConflict: 'intake_id' });
+            
+            jiraResult = { jpdIssueKey: existingJpdKey, jiraBaseUrl: baseUrl, action: 'updated' };
+          } else {
+            const errorText = await updateResponse.text();
+            console.error("Jira update error:", updateResponse.status, errorText);
+          }
         } else {
-          const errorText = await jiraResponse.text();
-          console.error("Jira API error:", jiraResponse.status, errorText);
+          // CREATE new Jira ticket
+          console.log("Creating new JPD ticket...");
+          
+          const createPayload = {
+            fields: {
+              project: { key: "IN" },
+              summary: `[${routingResult.path}] ${issueTitle}`,
+              description: issueContent,
+              issuetype: { name: 'Idea' },
+              labels: ['ai-intake-router', routingResult.path.toLowerCase().replace('_', '-')],
+            }
+          };
+
+          const jiraResponse = await fetch(`${baseUrl}/rest/api/3/issue`, {
+            method: 'POST',
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify(createPayload),
+          });
+
+          if (jiraResponse.ok) {
+            const jiraData = await jiraResponse.json();
+            console.log("Created JPD ticket:", jiraData.key);
+            
+            // Update intake with JPD key
+            await supabase
+              .from("intakes")
+              .update({ jpd_issue_key: jiraData.key })
+              .eq("id", intakeId);
+            
+            // Save to jira_exports
+            await supabase
+              .from("jira_exports")
+              .upsert({
+                intake_id: intakeId,
+                jpd_issue_key: jiraData.key,
+                status: 'success',
+                logs: [`✓ Created JPD Idea: ${jiraData.key}`],
+              }, { onConflict: 'intake_id' });
+            
+            jiraResult = { jpdIssueKey: jiraData.key, jiraBaseUrl: baseUrl, action: 'created' };
+          } else {
+            const errorText = await jiraResponse.text();
+            console.error("Jira API error:", jiraResponse.status, errorText);
+          }
         }
       } else {
-        console.log("Jira credentials not configured, skipping auto-create");
+        console.log("Jira credentials not configured, skipping");
       }
     } catch (jiraError) {
-      console.error("Failed to create Jira ticket:", jiraError);
+      console.error("Failed to create/update Jira ticket:", jiraError);
       // Don't throw - spec was saved successfully
     }
 
