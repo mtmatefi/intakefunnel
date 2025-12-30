@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard,
@@ -22,6 +22,8 @@ import {
   LogOut,
   User,
   ChevronDown,
+  UserCog,
+  X,
 } from 'lucide-react';
 import type { UserRole } from '@/types/intake';
 
@@ -41,17 +43,17 @@ const roleLabels: Record<UserRole, string> = {
   admin: 'Admin',
 };
 
-const roleBadgeVariants: Record<UserRole, 'default' | 'secondary' | 'outline'> = {
+const roleBadgeVariants: Record<UserRole, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   requester: 'secondary',
   architect: 'default',
   engineer_lead: 'outline',
-  admin: 'default',
+  admin: 'destructive',
 };
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, switchRole } = useAuth();
+  const { user, isAdmin, isImpersonating, switchRole, stopImpersonating, logout } = useAuth();
 
   if (!user) {
     return <>{children}</>;
@@ -68,6 +70,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Impersonation Banner */}
+      {isImpersonating && (
+        <div className="bg-warning text-warning-foreground px-4 py-2 flex items-center justify-center gap-4">
+          <UserCog className="h-4 w-4" />
+          <span className="text-sm font-medium">
+            Sie sehen die App als <strong>{roleLabels[user.role]}</strong>
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={stopImpersonating}
+            className="h-6 gap-1 bg-background text-foreground hover:bg-muted"
+          >
+            <X className="h-3 w-3" />
+            Beenden
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-card shadow-sm">
         <div className="flex h-16 items-center justify-between px-6">
@@ -103,36 +124,50 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Demo Role Switcher */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Badge variant={roleBadgeVariants[user.role]}>
-                    {roleLabels[user.role]}
-                  </Badge>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Switch Role (Demo)</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {Object.entries(roleLabels).map(([role, label]) => (
-                  <DropdownMenuItem
-                    key={role}
-                    onClick={() => switchRole(role as UserRole)}
-                    className={cn(user.role === role && 'bg-accent')}
-                  >
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Role Switcher (Admin only) */}
+            {isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Badge variant={roleBadgeVariants[user.role]}>
+                      {roleLabels[user.role]}
+                    </Badge>
+                    {isImpersonating && <span className="text-xs text-muted-foreground">(Impersonation)</span>}
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Rolle wechseln (Admin)</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {Object.entries(roleLabels).map(([role, label]) => (
+                    <DropdownMenuItem
+                      key={role}
+                      onClick={() => switchRole(role as UserRole)}
+                      className={cn(user.role === role && 'bg-accent')}
+                    >
+                      {label}
+                      {role === user.actualRole && (
+                        <Badge variant="outline" className="ml-2 text-xs">Ihre Rolle</Badge>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Non-admin role badge */}
+            {!isAdmin && (
+              <Badge variant={roleBadgeVariants[user.role]}>
+                {roleLabels[user.role]}
+              </Badge>
+            )}
 
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.avatarUrl} />
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
                       {user.displayName.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
@@ -150,18 +185,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="mr-2 h-4 w-4" />
-                  Profile
+                  Profil
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
                   <Settings className="mr-2 h-4 w-4" />
-                  Settings
+                  Einstellungen
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
-                  Log out
+                  Abmelden
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

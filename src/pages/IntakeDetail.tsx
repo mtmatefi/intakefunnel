@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { SpecAmendmentDialog } from '@/components/spec/SpecAmendmentDialog';
 
 export default function IntakeDetailPage() {
   const { id } = useParams();
@@ -51,6 +52,8 @@ export default function IntakeDetailPage() {
 
   const spec = specDoc?.structured_json as any;
   const pathInfo = routing ? deliveryPathInfo[routing.path] : null;
+  const canEditSpec = user?.role === 'architect' || user?.role === 'admin';
+  const canRegenerate = user?.role === 'admin';
 
   const handleExportToJira = async () => {
     if (!id) return;
@@ -318,8 +321,39 @@ export default function IntakeDetailPage() {
               <Card>
                 <CardContent className="pt-6 text-center py-12">
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">No specification generated yet</p>
+                  <p className="text-muted-foreground mb-4">Noch keine Spezifikation generiert</p>
                   {transcript.length > 0 && (
+                    <Button onClick={handleGenerateSpec} disabled={generateSpec.isPending}>
+                      {generateSpec.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
+                      Mit KI generieren
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Spec Actions for Architects/Admins */}
+                {(canEditSpec || canRegenerate) && specDoc && (
+                  <div className="flex justify-end gap-2">
+                    {canRegenerate && (
+                      <Button variant="outline" size="sm" onClick={handleGenerateSpec} disabled={generateSpec.isPending}>
+                        {generateSpec.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-2 h-4 w-4" />
+                        )}
+                        Neu generieren
+                      </Button>
+                    )}
+                    {canEditSpec && id && (
+                      <SpecAmendmentDialog intakeId={id} specId={specDoc.id} />
+                    )}
+                  </div>
+                )}
                     <Button onClick={handleGenerateSpec} disabled={generateSpec.isPending}>
                       {generateSpec.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -14,6 +14,8 @@ import ArchitectQueuePage from "./pages/ArchitectQueue";
 import AuditLogPage from "./pages/AuditLog";
 import PoliciesPage from "./pages/admin/Policies";
 import IntegrationsPage from "./pages/admin/Integrations";
+import ProfilePage from "./pages/Profile";
+import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +59,8 @@ function AppRoutes() {
       <Route path="/audit" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
       <Route path="/admin/policies" element={<ProtectedRoute><PoliciesPage /></ProtectedRoute>} />
       <Route path="/admin/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

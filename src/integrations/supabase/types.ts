@@ -87,6 +87,7 @@ export type Database = {
           category: string | null
           created_at: string
           id: string
+          jpd_issue_key: string | null
           priority: string | null
           requester_id: string
           status: Database["public"]["Enums"]["intake_status"]
@@ -98,6 +99,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           id?: string
+          jpd_issue_key?: string | null
           priority?: string | null
           requester_id: string
           status?: Database["public"]["Enums"]["intake_status"]
@@ -109,6 +111,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           id?: string
+          jpd_issue_key?: string | null
           priority?: string | null
           requester_id?: string
           status?: Database["public"]["Enums"]["intake_status"]
@@ -168,7 +171,11 @@ export type Database = {
           created_at: string
           display_name: string
           email: string | null
+          first_name: string | null
           id: string
+          last_name: string | null
+          preferred_language: string | null
+          preferred_theme: string | null
           updated_at: string
           user_id: string
         }
@@ -177,7 +184,11 @@ export type Database = {
           created_at?: string
           display_name: string
           email?: string | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
+          preferred_language?: string | null
+          preferred_theme?: string | null
           updated_at?: string
           user_id: string
         }
@@ -186,7 +197,11 @@ export type Database = {
           created_at?: string
           display_name?: string
           email?: string | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
+          preferred_language?: string | null
+          preferred_theme?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -226,6 +241,60 @@ export type Database = {
             columns: ["intake_id"]
             isOneToOne: false
             referencedRelation: "intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spec_amendments: {
+        Row: {
+          amended_by: string
+          amendment_type: string
+          created_at: string
+          field_name: string | null
+          id: string
+          intake_id: string
+          new_value: string | null
+          original_value: string | null
+          reason: string
+          spec_id: string
+        }
+        Insert: {
+          amended_by: string
+          amendment_type: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          intake_id: string
+          new_value?: string | null
+          original_value?: string | null
+          reason: string
+          spec_id: string
+        }
+        Update: {
+          amended_by?: string
+          amendment_type?: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          intake_id?: string
+          new_value?: string | null
+          original_value?: string | null
+          reason?: string
+          spec_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spec_amendments_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: false
+            referencedRelation: "intakes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spec_amendments_spec_id_fkey"
+            columns: ["spec_id"]
+            isOneToOne: false
+            referencedRelation: "spec_documents"
             referencedColumns: ["id"]
           },
         ]
