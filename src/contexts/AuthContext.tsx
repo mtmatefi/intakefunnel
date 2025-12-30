@@ -8,6 +8,7 @@ interface AuthUser {
   email: string;
   displayName: string;
   role: UserRole;
+  actualRole: UserRole; // The real role from the database
   avatarUrl?: string;
 }
 
@@ -16,10 +17,13 @@ interface AuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAdmin: boolean;
+  isImpersonating: boolean;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   signup: (email: string, password: string, displayName: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
   switchRole: (role: UserRole) => void;
+  stopImpersonating: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,12 +80,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
+      const actualRole = (roleData?.role as UserRole) || 'requester';
+      
+      // Check if there's an impersonated role in sessionStorage (only for admins)
+      const impersonatedRole = sessionStorage.getItem('impersonated_role') as UserRole | null;
+      const effectiveRole = (actualRole === 'admin' && impersonatedRole) ? impersonatedRole : actualRole;
+
       if (profile) {
         setUser({
           id: userId,
           email: profile.email || '',
           displayName: profile.display_name,
-          role: (roleData?.role as UserRole) || 'requester',
+          role: effectiveRole,
+          actualRole: actualRole,
           avatarUrl: profile.avatar_url || undefined,
         });
       } else {
@@ -92,7 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: userId,
             email: session.user.email || '',
             displayName: session.user.email?.split('@')[0] || 'User',
-            role: 'requester',
+            role: actualRole,
+            actualRole: actualRole,
           });
         }
       }
@@ -136,23 +148,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    sessionStorage.removeItem('impersonated_role');
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
   };
 
-  const switchRole = async (role: UserRole) => {
+  // Only admins can impersonate other roles
+  const switchRole = (role: UserRole) => {
+    if (!user || user.actualRole !== 'admin') return;
+    
+    sessionStorage.setItem('impersonated_role', role);
+    setUser({ ...user, role });
+  };
+
+  const stopImpersonating = () => {
     if (!user) return;
     
-    // Update role in database
-    const { error } = await supabase
-      .from('user_roles')
-      .upsert({ user_id: user.id, role }, { onConflict: 'user_id,role' });
-    
-    if (!error) {
-      setUser({ ...user, role });
-    }
+    sessionStorage.removeItem('impersonated_role');
+    setUser({ ...user, role: user.actualRole });
   };
+
+  const isAdmin = user?.actualRole === 'admin';
+  const isImpersonating = user ? user.role !== user.actualRole : false;
 
   return (
     <AuthContext.Provider
@@ -161,10 +179,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         isAuthenticated: !!session,
         isLoading,
+        isAdmin,
+        isImpersonating,
         login,
         signup,
         logout,
         switchRole,
+        stopImpersonating,
       }}
     >
       {children}
