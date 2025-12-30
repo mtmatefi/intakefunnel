@@ -4,7 +4,7 @@ project_id = "rvtjphlhppxplemcxefo"
 verify_jwt = true
 
 [functions.generate-spec]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-intake]
 verify_jwt = false
