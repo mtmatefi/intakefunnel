@@ -12,11 +12,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIntake, useTranscript, useSpec, useRoutingScore, useExportToJira, useUpdateIntakeStatus, useGenerateSpec, useJiraExport } from '@/hooks/useIntakes';
 import { deliveryPathInfo } from '@/data/demo';
 import { cn } from '@/lib/utils';
-import { 
-  ArrowLeft, 
-  FileText, 
-  MessageSquare, 
-  Route, 
+import {
+  ArrowLeft,
+  FileText,
+  MessageSquare,
+  Route,
   CheckCircle,
   AlertTriangle,
   ExternalLink,
@@ -29,6 +29,11 @@ import {
   Shield,
   Loader2,
   Sparkles,
+  Target,
+  BarChart3,
+  Activity,
+  TrendingUp,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
@@ -251,10 +256,14 @@ export default function IntakeDetailPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="spec" className="gap-2">
               <FileText className="h-4 w-4" />
               Specification
+            </TabsTrigger>
+            <TabsTrigger value="outcomes" className="gap-2">
+              <Target className="h-4 w-4" />
+              Outcomes
             </TabsTrigger>
             <TabsTrigger value="transcript" className="gap-2">
               <MessageSquare className="h-4 w-4" />
@@ -629,6 +638,176 @@ export default function IntakeDetailPage() {
                     </CardContent>
                   </Card>
                 </div>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Outcomes Tab */}
+          <TabsContent value="outcomes" className="space-y-6">
+            {!spec?.outcomeHypotheses?.length && !spec?.measurementPlan ? (
+              <Card>
+                <CardContent className="pt-6 text-center py-12">
+                  <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground mb-2">Noch keine Outcome-Hypothesen definiert</p>
+                  <p className="text-xs text-muted-foreground">Outcome-Hypothesen werden automatisch bei der Spec-Generierung erstellt</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Outcome Hypotheses */}
+                {spec?.outcomeHypotheses?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Outcome-Hypothesen
+                      </CardTitle>
+                      <CardDescription>
+                        Jede Hypothese muss nach Go-Live verifiziert werden. Die App baut Messbarkeit automatisch ein.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {spec.outcomeHypotheses.map((hyp: any, i: number) => (
+                        <div key={hyp.id || i} className="p-4 border border-border rounded-lg space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{hyp.hypothesis}</p>
+                              <p className="text-xs text-muted-foreground mt-1">KPI: {hyp.kpiName}</p>
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
+                              <Badge variant={hyp.scope === 'full' ? 'default' : 'secondary'}>
+                                {hyp.scope === 'full' ? 'App misst direkt' : 'Teilweise messbar'}
+                              </Badge>
+                              <Badge variant={hyp.confidence === 'high' ? 'default' : hyp.confidence === 'medium' ? 'secondary' : 'outline'}>
+                                {hyp.confidence}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-4 gap-3 text-sm">
+                            <div className="bg-muted/50 p-2 rounded text-center">
+                              <p className="text-xs text-muted-foreground">Baseline (IST)</p>
+                              <p className="font-bold text-destructive">{hyp.baselineValue} {hyp.unit}</p>
+                            </div>
+                            <div className="bg-muted/50 p-2 rounded text-center">
+                              <p className="text-xs text-muted-foreground">Ziel (SOLL)</p>
+                              <p className="font-bold text-success">{hyp.targetValue} {hyp.unit}</p>
+                            </div>
+                            <div className="bg-muted/50 p-2 rounded text-center">
+                              <p className="text-xs text-muted-foreground">Zeitrahmen</p>
+                              <p className="font-bold">{hyp.timeframeWeeks} Wochen</p>
+                            </div>
+                            <div className="bg-muted/50 p-2 rounded text-center">
+                              <p className="text-xs text-muted-foreground">Datenquelle</p>
+                              <p className="font-bold text-xs">{hyp.dataSource === 'app_builtin' ? 'In-App' : hyp.dataSource === 'external_system' ? 'Extern' : hyp.dataSource}</p>
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-medium">Messmethode:</span> {hyp.measurementMethod}
+                          </div>
+
+                          {hyp.scope === 'partial' && hyp.scopeNote && (
+                            <div className="flex items-start gap-2 p-2 bg-warning/10 rounded text-xs">
+                              <AlertCircle className="h-3 w-3 text-warning mt-0.5 flex-shrink-0" />
+                              <span><span className="font-medium">Einschränkung:</span> {hyp.scopeNote}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Measurement Plan */}
+                {spec?.measurementPlan && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* API Endpoints */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4" />
+                          Outcome API Endpoints
+                        </CardTitle>
+                        <CardDescription>
+                          Diese Endpoints MÜSSEN in der gebauten App implementiert werden
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {spec.measurementPlan.apiEndpoints?.map((ep: any, i: number) => (
+                          <div key={i} className="p-3 bg-muted/50 rounded-lg space-y-1">
+                            <code className="text-xs font-mono text-primary">{ep.method} {ep.path}</code>
+                            <p className="text-xs text-muted-foreground">{ep.description}</p>
+                          </div>
+                        ))}
+                        {(!spec.measurementPlan.apiEndpoints || spec.measurementPlan.apiEndpoints.length === 0) && (
+                          <p className="text-sm text-muted-foreground">Keine API-Endpoints definiert</p>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Tracking Events */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          Tracking Events
+                        </CardTitle>
+                        <CardDescription>
+                          Diese Events MÜSSEN von der App automatisch erfasst werden
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {spec.measurementPlan.builtinTracking?.map((t: any, i: number) => (
+                          <div key={i} className="p-3 bg-muted/50 rounded-lg space-y-1">
+                            <div className="flex items-center justify-between">
+                              <code className="text-xs font-mono text-primary">{t.eventName}</code>
+                              <Badge variant="outline" className="text-xs">{t.aggregation}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{t.description}</p>
+                          </div>
+                        ))}
+                        {(!spec.measurementPlan.builtinTracking || spec.measurementPlan.builtinTracking.length === 0) && (
+                          <p className="text-sm text-muted-foreground">Keine Tracking-Events definiert</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Review Schedule */}
+                {spec?.measurementPlan && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <Clock className="h-5 w-5 text-primary mt-0.5" />
+                        <div className="space-y-2 flex-1">
+                          <p className="text-sm font-medium">Review-Zeitplan</p>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Erster Review</p>
+                              <p className="font-medium">{spec.measurementPlan.firstReviewAfterWeeks} Wochen nach Go-Live</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Kadenz</p>
+                              <p className="font-medium capitalize">{spec.measurementPlan.reviewCadence}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Dashboard</p>
+                              <p className="font-medium">{spec.measurementPlan.dashboardRequired ? 'Erforderlich' : 'Optional'}</p>
+                            </div>
+                          </div>
+                          {spec.measurementPlan.escalationThreshold && (
+                            <div className="flex items-start gap-2 p-2 bg-destructive/10 rounded text-xs mt-2">
+                              <AlertTriangle className="h-3 w-3 text-destructive mt-0.5 flex-shrink-0" />
+                              <span><span className="font-medium">Eskalation:</span> {spec.measurementPlan.escalationThreshold}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </TabsContent>

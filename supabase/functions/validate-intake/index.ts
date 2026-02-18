@@ -30,7 +30,7 @@ serve(async (req) => {
 
     console.log(`Validating answer for question: ${questionKey} in language: ${language}`);
 
-    const systemPromptDE = `Du bist ein erfahrener Solution Architect und Business Analyst, der Software-Anforderungen sammelt. 
+    const systemPromptDE = `Du bist ein erfahrener Solution Architect und Business Analyst, der Software-Anforderungen sammelt.
 Deine Aufgabe ist es, Benutzerantworten zu validieren und bei Bedarf Nachfragen zu stellen.
 WICHTIG: Antworte IMMER auf Deutsch!
 
@@ -52,9 +52,16 @@ Regeln:
 - enrichedAnswer: Falls du die Antwort für Jira aufbereiten kannst, eine verbesserte Version
 - missingAspects: Was fehlt noch für eine vollständige Spezifikation
 
+BESONDERS WICHTIG bei Outcome-Fragen (Kategorie "outcome"):
+- Achte darauf, dass Hypothesen MESSBAR formuliert sind (Zahlen, Prozent, konkrete Metriken)
+- Prüfe ob Baseline-Werte (IST-Zustand) genannt werden - ohne Baseline keine Messung!
+- Frage nach konkreten Zahlen wenn nur vage Aussagen kommen ("verbessern" → "um wieviel %?")
+- Prüfe ob der Zeitrahmen realistisch ist
+- Bei "scope: partial" - hilf dem Benutzer zu verstehen was die App selbst messen kann
+
 Sei freundlich aber gründlich. Stelle Nachfragen nur wenn wirklich wichtig.`;
 
-    const systemPromptEN = `You are an experienced Solution Architect and Business Analyst gathering software requirements. 
+    const systemPromptEN = `You are an experienced Solution Architect and Business Analyst gathering software requirements.
 Your task is to validate user answers and ask follow-up questions when needed.
 IMPORTANT: Always respond in English!
 
@@ -75,6 +82,13 @@ Rules:
 - suggestions: Concrete improvement suggestions (max 3)
 - enrichedAnswer: If you can enhance the answer for Jira, an improved version
 - missingAspects: What's still missing for a complete specification
+
+ESPECIALLY IMPORTANT for Outcome questions (category "outcome"):
+- Ensure hypotheses are MEASURABLE (numbers, percentages, concrete metrics)
+- Check that baseline values (current state) are provided - no baseline means no measurement!
+- Ask for specific numbers if answers are vague ("improve" → "by how much %?")
+- Verify the timeframe is realistic
+- For "scope: partial" - help the user understand what the app itself can measure
 
 Be friendly but thorough. Only ask follow-ups when really important.`;
 

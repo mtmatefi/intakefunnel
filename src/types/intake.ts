@@ -83,6 +83,8 @@ export interface StructuredSpec {
   risks: Risk[];
   assumptions: string[];
   openQuestions: string[];
+  outcomeHypotheses: OutcomeHypothesis[];
+  measurementPlan: MeasurementPlan;
 }
 
 export interface UserDefinition {
@@ -133,6 +135,55 @@ export interface Risk {
   probability: 'low' | 'medium' | 'high';
   impact: 'low' | 'medium' | 'high';
   mitigation: string;
+}
+
+// Outcome Verification: Every built solution must be measurable
+export interface OutcomeHypothesis {
+  id: string;
+  hypothesis: string;            // z.B. "Barcode-Scanning reduziert Suchzeit um 80%"
+  kpiName: string;               // z.B. "Durchschnittliche Suchzeit pro Artikel"
+  baselineValue: string;         // z.B. "15 Minuten"
+  targetValue: string;           // z.B. "3 Minuten"
+  unit: string;                  // z.B. "Minuten"
+  timeframeWeeks: number;        // z.B. 12 (Wochen nach Go-Live)
+  measurementMethod: string;     // z.B. "Automatische Zeitmessung von Scan-Request bis Item-Found"
+  dataSource: 'app_builtin' | 'external_system' | 'manual_survey' | 'api_integration';
+  confidence: 'high' | 'medium' | 'low';  // Wie sicher ist die Messbarkeit?
+  scope: 'full' | 'partial';    // Kann die App das alleine messen oder ist es Teil einer Gesamtlösung?
+  scopeNote?: string;            // Falls partial: Was liegt außerhalb?
+}
+
+export interface MeasurementEndpoint {
+  path: string;                  // z.B. "/api/v1/outcomes/search-time"
+  method: 'GET';
+  description: string;           // z.B. "Returns average search time per item over period"
+  responseSchema: {
+    kpiName: string;
+    currentValue: string;
+    baselineValue: string;
+    targetValue: string;
+    unit: string;
+    trend: 'improving' | 'stable' | 'declining';
+    dataPoints: number;          // Anzahl Messungen
+    periodStart: string;
+    periodEnd: string;
+  };
+}
+
+export interface MeasurementPlan {
+  dashboardRequired: boolean;    // Soll ein Outcome-Dashboard eingebaut werden?
+  apiEndpoints: MeasurementEndpoint[];
+  builtinTracking: BuiltinTracking[];
+  reviewCadence: 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+  firstReviewAfterWeeks: number;
+  escalationThreshold: string;   // z.B. "Wenn nach 8 Wochen < 50% der Zielverbesserung"
+}
+
+export interface BuiltinTracking {
+  eventName: string;             // z.B. "item_scanned", "item_found", "search_initiated"
+  description: string;
+  linkedHypothesisId: string;    // Verknüpfung zur Hypothese
+  aggregation: 'count' | 'average' | 'p95' | 'sum' | 'rate';
 }
 
 export interface RoutingScore {
@@ -199,7 +250,7 @@ export interface AuditLog {
 // Interview question structure
 export interface InterviewQuestion {
   key: string;
-  category: 'problem' | 'users' | 'data' | 'integrations' | 'ux' | 'nfr';
+  category: 'problem' | 'users' | 'data' | 'integrations' | 'ux' | 'nfr' | 'outcome';
   question: string;
   helpText?: string;
   inputType: 'text' | 'textarea' | 'select' | 'multiselect' | 'number';

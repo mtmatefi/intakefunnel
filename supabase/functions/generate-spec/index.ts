@@ -191,6 +191,22 @@ Gegeben ein Gesprächstranskript zwischen einem Benutzer und einem KI-Assistente
 17. Risiken - Potenzielle Probleme mit Wahrscheinlichkeit und Auswirkung
 18. Annahmen - Dinge, die als wahr angenommen werden
 19. Offene Fragen - Dinge, die noch geklärt werden müssen
+20. OUTCOME-HYPOTHESEN (PFLICHT!) - Für JEDE gebaute Lösung MUSS gelten:
+    - Definiere 2-5 messbare Hypothesen (z.B. "Suchzeit sinkt von 15 Min auf 3 Min")
+    - Jede Hypothese braucht: KPI-Name, Baseline (IST-Wert), Zielwert, Einheit, Zeitrahmen in Wochen
+    - Bestimme die Datenquelle: app_builtin (App kann selbst messen), external_system, manual_survey, api_integration
+    - Bestimme ob die App den KPI alleine messen kann (full) oder nur teilweise (partial)
+    - Bei partial: erkläre was außerhalb des App-Scopes liegt
+21. MEASUREMENT PLAN (PFLICHT!) - Jede Lösung braucht eingebaute Messbarkeit:
+    - Definiere API-Endpunkte die KPI-Daten liefern (z.B. GET /api/v1/outcomes/search-time)
+    - Definiere Tracking-Events die die App automatisch erfassen muss (z.B. item_scanned, search_initiated)
+    - Jedes Event wird mit einer Hypothese verknüpft
+    - Bestimme Review-Kadenz und wann die erste Überprüfung stattfindet
+    - Definiere eine Eskalationsschwelle (wann wird eskaliert wenn Hypothese sich nicht bestätigt)
+
+GRUNDPRINZIP: Jede gebaute Software muss ihre eigene Wirksamkeit beweisen können.
+Auch wenn die App nur Teil einer Gesamtlösung ist - sie muss ihren Beitrag messbar machen.
+Denke dabei: "Was können wir in die App einbauen, damit wir in 8 Wochen wissen ob es funktioniert?"
 
 Sei gründlich aber präzise. Konzentriere dich auf umsetzbare, spezifische Details. ALLE AUSGABEN AUF DEUTSCH!`;
 
@@ -362,8 +378,80 @@ serve(async (req) => {
                   },
                   assumptions: { type: "array", items: { type: "string" } },
                   openQuestions: { type: "array", items: { type: "string" } },
+                  outcomeHypotheses: {
+                    type: "array",
+                    description: "Measurable outcome hypotheses - REQUIRED for every spec",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string", description: "Unique ID like hyp-1, hyp-2" },
+                        hypothesis: { type: "string", description: "The hypothesis statement, e.g. 'Barcode scanning reduces search time by 80%'" },
+                        kpiName: { type: "string", description: "Name of the KPI to track" },
+                        baselineValue: { type: "string", description: "Current/baseline value (number as string)" },
+                        targetValue: { type: "string", description: "Target value after go-live (number as string)" },
+                        unit: { type: "string", description: "Unit of measurement (e.g. Minuten, %, Stunden/Monat)" },
+                        timeframeWeeks: { type: "number", description: "Weeks after go-live to measure" },
+                        measurementMethod: { type: "string", description: "How to measure this KPI concretely" },
+                        dataSource: { type: "string", enum: ["app_builtin", "external_system", "manual_survey", "api_integration"] },
+                        confidence: { type: "string", enum: ["high", "medium", "low"] },
+                        scope: { type: "string", enum: ["full", "partial"], description: "Can the app measure this alone (full) or is it part of bigger picture (partial)?" },
+                        scopeNote: { type: "string", description: "If partial: what is outside the app's measurement scope?" },
+                      },
+                      required: ["id", "hypothesis", "kpiName", "baselineValue", "targetValue", "unit", "timeframeWeeks", "measurementMethod", "dataSource", "confidence", "scope"],
+                    },
+                  },
+                  measurementPlan: {
+                    type: "object",
+                    description: "Built-in measurement plan - REQUIRED for every spec",
+                    properties: {
+                      dashboardRequired: { type: "boolean", description: "Whether an outcome dashboard should be built into the app" },
+                      apiEndpoints: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            path: { type: "string", description: "API path, e.g. /api/v1/outcomes/search-time" },
+                            method: { type: "string", enum: ["GET"] },
+                            description: { type: "string" },
+                            responseSchema: {
+                              type: "object",
+                              properties: {
+                                kpiName: { type: "string" },
+                                currentValue: { type: "string" },
+                                baselineValue: { type: "string" },
+                                targetValue: { type: "string" },
+                                unit: { type: "string" },
+                                trend: { type: "string", enum: ["improving", "stable", "declining"] },
+                                dataPoints: { type: "number" },
+                                periodStart: { type: "string" },
+                                periodEnd: { type: "string" },
+                              },
+                            },
+                          },
+                          required: ["path", "method", "description"],
+                        },
+                      },
+                      builtinTracking: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            eventName: { type: "string", description: "snake_case event name, e.g. item_scanned" },
+                            description: { type: "string" },
+                            linkedHypothesisId: { type: "string", description: "Reference to hypothesis ID" },
+                            aggregation: { type: "string", enum: ["count", "average", "p95", "sum", "rate"] },
+                          },
+                          required: ["eventName", "description", "linkedHypothesisId", "aggregation"],
+                        },
+                      },
+                      reviewCadence: { type: "string", enum: ["weekly", "biweekly", "monthly", "quarterly"] },
+                      firstReviewAfterWeeks: { type: "number" },
+                      escalationThreshold: { type: "string", description: "When to escalate if hypothesis is not confirmed" },
+                    },
+                    required: ["dashboardRequired", "apiEndpoints", "builtinTracking", "reviewCadence", "firstReviewAfterWeeks", "escalationThreshold"],
+                  },
                 },
-                required: ["problemStatement", "currentProcess", "painPoints", "goals", "users", "dataClassification"],
+                required: ["problemStatement", "currentProcess", "painPoints", "goals", "users", "dataClassification", "outcomeHypotheses", "measurementPlan"],
               },
             },
           },
@@ -770,8 +858,57 @@ function generateMarkdown(spec: any): string {
   }
   
   if (spec.openQuestions?.length) {
-    md += `## Open Questions\n${spec.openQuestions.map((q: string) => `- ${q}`).join("\n")}\n`;
+    md += `## Open Questions\n${spec.openQuestions.map((q: string) => `- ${q}`).join("\n")}\n\n`;
   }
-  
+
+  // Outcome Verification Section
+  if (spec.outcomeHypotheses?.length) {
+    md += `## Outcome Hypotheses\n\n`;
+    md += `| # | Hypothesis | KPI | Baseline | Target | Timeframe | Measurable by App? |\n`;
+    md += `|---|-----------|-----|----------|--------|-----------|-------------------|\n`;
+    spec.outcomeHypotheses.forEach((h: any, i: number) => {
+      md += `| ${i + 1} | ${h.hypothesis} | ${h.kpiName} | ${h.baselineValue} ${h.unit} | ${h.targetValue} ${h.unit} | ${h.timeframeWeeks} weeks | ${h.scope === 'full' ? 'Yes' : 'Partial'} |\n`;
+    });
+    md += `\n`;
+
+    // Scope notes for partial hypotheses
+    const partials = spec.outcomeHypotheses.filter((h: any) => h.scope === 'partial' && h.scopeNote);
+    if (partials.length > 0) {
+      md += `### Measurement Scope Notes\n`;
+      partials.forEach((h: any) => {
+        md += `- **${h.kpiName}**: ${h.scopeNote}\n`;
+      });
+      md += `\n`;
+    }
+  }
+
+  if (spec.measurementPlan) {
+    md += `## Measurement Plan\n\n`;
+    md += `- **Outcome Dashboard**: ${spec.measurementPlan.dashboardRequired ? 'Required - must be built into the application' : 'Not required'}\n`;
+    md += `- **First Review**: ${spec.measurementPlan.firstReviewAfterWeeks} weeks after go-live\n`;
+    md += `- **Review Cadence**: ${spec.measurementPlan.reviewCadence}\n`;
+    md += `- **Escalation**: ${spec.measurementPlan.escalationThreshold}\n\n`;
+
+    if (spec.measurementPlan.apiEndpoints?.length) {
+      md += `### Outcome API Endpoints\n\n`;
+      md += `These endpoints MUST be implemented in the application:\n\n`;
+      spec.measurementPlan.apiEndpoints.forEach((ep: any) => {
+        md += `- \`${ep.method} ${ep.path}\` - ${ep.description}\n`;
+      });
+      md += `\n`;
+    }
+
+    if (spec.measurementPlan.builtinTracking?.length) {
+      md += `### Built-in Tracking Events\n\n`;
+      md += `These events MUST be emitted by the application:\n\n`;
+      md += `| Event | Description | Aggregation | Linked Hypothesis |\n`;
+      md += `|-------|------------|-------------|-------------------|\n`;
+      spec.measurementPlan.builtinTracking.forEach((t: any) => {
+        md += `| \`${t.eventName}\` | ${t.description} | ${t.aggregation} | ${t.linkedHypothesisId} |\n`;
+      });
+      md += `\n`;
+    }
+  }
+
   return md;
 }

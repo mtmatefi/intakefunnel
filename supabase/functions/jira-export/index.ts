@@ -16,6 +16,26 @@ interface JiraExportRequest {
     acceptanceCriteria: Array<{ storyRef: string; given: string; when: string; then: string }>;
     risks: Array<{ description: string; probability: string; impact: string }>;
     nfrs: Record<string, unknown>;
+    outcomeHypotheses?: Array<{
+      id: string;
+      hypothesis: string;
+      kpiName: string;
+      baselineValue: string;
+      targetValue: string;
+      unit: string;
+      timeframeWeeks: number;
+      measurementMethod: string;
+      dataSource: string;
+      scope: string;
+    }>;
+    measurementPlan?: {
+      dashboardRequired: boolean;
+      apiEndpoints: Array<{ path: string; method: string; description: string }>;
+      builtinTracking: Array<{ eventName: string; description: string; linkedHypothesisId: string; aggregation: string }>;
+      reviewCadence: string;
+      firstReviewAfterWeeks: number;
+      escalationThreshold: string;
+    };
   };
   routing: {
     path: string;
@@ -225,6 +245,183 @@ serve(async (req) => {
           const errMsg = error instanceof Error ? error.message : String(error);
           logs.push(`✗ Failed to create story ${ac.storyRef}: ${errMsg}`);
           console.error(`Failed to create story: ${errMsg}`);
+        }
+      }
+    }
+
+    // Step 3: Create Outcome Measurement Stories
+    if (epicKey && spec.outcomeHypotheses?.length) {
+      // Create one story for outcome tracking infrastructure
+      try {
+        logs.push('Creating Outcome Measurement stories...');
+
+        // Build tracking events list for the description
+        const trackingEvents = spec.measurementPlan?.builtinTracking || [];
+        const apiEndpoints = spec.measurementPlan?.apiEndpoints || [];
+
+        const trackingContent = trackingEvents.map((t) => ({
+          type: 'listItem' as const,
+          content: [{ type: 'paragraph' as const, content: [
+            { type: 'text' as const, text: `${t.eventName}`, marks: [{ type: 'code' as const }] },
+            { type: 'text' as const, text: ` - ${t.description} (${t.aggregation})` },
+          ] }]
+        }));
+
+        const apiContent = apiEndpoints.map((ep) => ({
+          type: 'listItem' as const,
+          content: [{ type: 'paragraph' as const, content: [
+            { type: 'text' as const, text: `${ep.method} ${ep.path}`, marks: [{ type: 'code' as const }] },
+            { type: 'text' as const, text: ` - ${ep.description}` },
+          ] }]
+        }));
+
+        const measureStoryPayload = {
+          fields: {
+            project: { key: projectKeys.softwareProject },
+            summary: `MEASURE: Implement outcome tracking & KPI endpoints`,
+            description: {
+              type: 'doc',
+              version: 1,
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'This story ensures the application can prove its own effectiveness. Every built solution must be measurable.', marks: [{ type: 'strong' }] }]
+                },
+                {
+                  type: 'heading',
+                  attrs: { level: 2 },
+                  content: [{ type: 'text', text: 'Tracking Events to Implement' }]
+                },
+                ...(trackingContent.length > 0 ? [{
+                  type: 'bulletList' as const,
+                  content: trackingContent,
+                }] : [{
+                  type: 'paragraph' as const,
+                  content: [{ type: 'text' as const, text: 'No tracking events defined yet.' }],
+                }]),
+                {
+                  type: 'heading',
+                  attrs: { level: 2 },
+                  content: [{ type: 'text', text: 'Outcome API Endpoints to Implement' }]
+                },
+                ...(apiContent.length > 0 ? [{
+                  type: 'bulletList' as const,
+                  content: apiContent,
+                }] : [{
+                  type: 'paragraph' as const,
+                  content: [{ type: 'text' as const, text: 'No API endpoints defined yet.' }],
+                }]),
+                ...(spec.measurementPlan?.dashboardRequired ? [{
+                  type: 'heading' as const,
+                  attrs: { level: 2 },
+                  content: [{ type: 'text' as const, text: 'Outcome Dashboard' }],
+                }, {
+                  type: 'paragraph' as const,
+                  content: [{ type: 'text' as const, text: 'An outcome dashboard MUST be built into the application showing KPI progress vs. baseline and target values.' }],
+                }] : []),
+              ]
+            },
+            issuetype: { name: 'Story' },
+            labels: ['ai-intake-router', 'outcome-measurement'],
+            parent: { key: epicKey },
+          }
+        };
+
+        const measureResult = await jiraFetch('/issue', {
+          method: 'POST',
+          body: JSON.stringify(measureStoryPayload),
+        });
+
+        logs.push(`✓ Created Measurement Story: ${measureResult.key}`);
+        console.log(`Created Measurement Story: ${measureResult.key}`);
+
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        logs.push(`✗ Failed to create measurement story: ${errMsg}`);
+        console.error(`Failed to create measurement story: ${errMsg}`);
+      }
+
+      // Create individual hypothesis verification stories
+      for (const hyp of spec.outcomeHypotheses) {
+        try {
+          const hypStoryPayload = {
+            fields: {
+              project: { key: projectKeys.softwareProject },
+              summary: `VERIFY: ${hyp.kpiName} (${hyp.baselineValue}→${hyp.targetValue} ${hyp.unit})`,
+              description: {
+                type: 'doc',
+                version: 1,
+                content: [
+                  {
+                    type: 'heading',
+                    attrs: { level: 2 },
+                    content: [{ type: 'text', text: 'Hypothesis' }]
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: hyp.hypothesis }]
+                  },
+                  {
+                    type: 'heading',
+                    attrs: { level: 2 },
+                    content: [{ type: 'text', text: 'Acceptance Criteria' }]
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: 'Given ', marks: [{ type: 'strong' }] },
+                      { type: 'text', text: `baseline ${hyp.kpiName} is ${hyp.baselineValue} ${hyp.unit}` },
+                    ]
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: 'When ', marks: [{ type: 'strong' }] },
+                      { type: 'text', text: `the solution has been live for ${hyp.timeframeWeeks} weeks` },
+                    ]
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: 'Then ', marks: [{ type: 'strong' }] },
+                      { type: 'text', text: `${hyp.kpiName} should be ${hyp.targetValue} ${hyp.unit} or better` },
+                    ]
+                  },
+                  {
+                    type: 'heading',
+                    attrs: { level: 2 },
+                    content: [{ type: 'text', text: 'Measurement Method' }]
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: hyp.measurementMethod }]
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: `Data Source: ${hyp.dataSource} | Scope: ${hyp.scope}` },
+                    ]
+                  },
+                ]
+              },
+              issuetype: { name: 'Story' },
+              labels: ['ai-intake-router', 'outcome-verification', hyp.id],
+              parent: { key: epicKey },
+            }
+          };
+
+          const hypResult = await jiraFetch('/issue', {
+            method: 'POST',
+            body: JSON.stringify(hypStoryPayload),
+          });
+
+          logs.push(`✓ Created Verification Story: ${hypResult.key} (${hyp.kpiName})`);
+          console.log(`Created Verification Story: ${hypResult.key}`);
+
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : String(error);
+          logs.push(`✗ Failed to create verification story for ${hyp.kpiName}: ${errMsg}`);
+          console.error(`Failed to create verification story: ${errMsg}`);
         }
       }
     }

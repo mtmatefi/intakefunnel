@@ -43,7 +43,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const categories = ['problem', 'users', 'data', 'integrations', 'ux', 'nfr'] as const;
+const categories = ['problem', 'users', 'data', 'integrations', 'ux', 'nfr', 'outcome'] as const;
 
 interface AIValidation {
   isComplete: boolean;
