@@ -318,8 +318,11 @@ export function GuidelineChatCreator({ onSave, onUpdate, userId, onClose, editin
           <CardHeader className="pb-3 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base">KI Guideline-Assistent</CardTitle>
+                {isEditing ? <Pencil className="h-5 w-5 text-primary" /> : <MessageSquare className="h-5 w-5 text-primary" />}
+                <CardTitle className="text-base">
+                  {isEditing ? `Bearbeiten: ${existingGuideline?.name}` : 'KI Guideline-Assistent'}
+                </CardTitle>
+              </div>
               </div>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
