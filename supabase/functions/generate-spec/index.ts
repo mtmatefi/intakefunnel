@@ -166,7 +166,7 @@ function generateRoutingExplanation(path: DeliveryPath, breakdown: ScoreBreakdow
   return explanation;
 }
 
-const systemPrompt = `Du bist ein Software-Anforderungsanalyst. Deine Aufgabe ist es, Interview-Transkripte zu analysieren und strukturierte Spezifikationen zu erstellen.
+const baseSystemPrompt = `Du bist ein Software-Anforderungsanalyst mit Expertise in Compliance, Security, Enterprise Architecture und DevOps. Deine Aufgabe ist es, Interview-Transkripte zu analysieren und strukturierte Spezifikationen zu erstellen.
 
 WICHTIG: Alle Ausgaben müssen auf DEUTSCH sein!
 
@@ -191,6 +191,7 @@ Gegeben ein Gesprächstranskript zwischen einem Benutzer und einem KI-Assistente
 17. Risiken - Potenzielle Probleme mit Wahrscheinlichkeit und Auswirkung
 18. Annahmen - Dinge, die als wahr angenommen werden
 19. Offene Fragen - Dinge, die noch geklärt werden müssen
+20. **Compliance-Bewertung** - Welche Compliance-Frameworks sind relevant, welche Guidelines greifen, welche Maßnahmen sind erforderlich
 
 Sei gründlich aber präzise. Konzentriere dich auf umsetzbare, spezifische Details. ALLE AUSGABEN AUF DEUTSCH!`;
 
