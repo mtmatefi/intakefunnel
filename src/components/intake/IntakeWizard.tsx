@@ -1067,9 +1067,18 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
                 >
                   <div
                     className={cn(
-                      'max-w-[80%] p-3 text-sm rounded-lg prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0 prose-headings:my-1 max-w-none',
+                      'max-w-[80%] p-4 text-sm rounded-lg max-w-none',
+                      '[&_p]:mb-2 [&_p:last-child]:mb-0',
+                      '[&_strong]:font-semibold',
+                      '[&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2 [&_ul]:space-y-1',
+                      '[&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_ol]:space-y-1',
+                      '[&_hr]:my-3 [&_hr]:border-border',
+                      '[&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-2',
+                      '[&_h2]:text-sm [&_h2]:font-bold [&_h2]:mb-1.5',
+                      '[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-1',
+                      '[&_em]:italic [&_em]:text-inherit',
                       msg.speaker === 'user'
-                        ? 'bg-primary text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-em:text-primary-foreground'
+                        ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-foreground'
                     )}
                   >
