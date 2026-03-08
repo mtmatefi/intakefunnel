@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInnovations, useInnovationFeedback, useAddInnovationFeedback, useFetchInnovationsFromSculptor } from "@/hooks/useInnovations";
+import { useWorkItemTree, useExportWorkItemsToJira } from "@/hooks/useWorkItems";
+import type { WorkItemTree } from "@/hooks/useWorkItems";
 import { useUnreadFeedback } from "@/hooks/useUnreadFeedback";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Badge } from "@/components/ui/badge";
