@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
         effort_estimate: inn.effort_estimate || null,
         learnings: inn.learnings || null,
         responsible: inn.responsible || null,
-        stage: inn.stage || "ideation",
+        stage: inn.stage || "discover",
         status: inn.status || "green",
         target_date: inn.target_date || null,
         product_name: inn.product_name || null,
