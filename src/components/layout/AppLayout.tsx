@@ -352,8 +352,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors">
                 <Globe className="h-[18px] w-[18px]" />
               </button>
-              <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors">
+              <button
+                className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                onClick={() => navigate("/innovations")}
+                title="Ungelesene Kommentare"
+              >
                 <Bell className="h-[18px] w-[18px]" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
+                    {totalUnread}
+                  </span>
+                )}
               </button>
 
               {/* User Menu */}
