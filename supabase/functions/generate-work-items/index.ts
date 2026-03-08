@@ -270,6 +270,7 @@ NFRs: Verfügbarkeit: ${structuredSpec.nfrs?.availability || "N/A"}, Antwortzeit
           item_type: "epic",
           title: epic.title,
           description: epic.description || null,
+          priority: epic.priority || "high",
           status: "draft",
           source_app: "intake_funnel",
         })
