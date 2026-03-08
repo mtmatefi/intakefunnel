@@ -84,13 +84,18 @@ export function useInnovationFeedback(innovationId?: string) {
     queryKey: ['innovation-feedback', innovationId],
     queryFn: async () => {
       if (!innovationId) return [];
+      // Fetch feedback with author profile join
       const { data, error } = await supabase
         .from('innovation_feedback' as any)
-        .select('*')
+        .select('*, profiles:user_id(display_name)')
         .eq('innovation_id', innovationId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return (data || []) as unknown as InnovationFeedback[];
+      // Flatten profile into author_display_name
+      return ((data || []) as any[]).map(fb => ({
+        ...fb,
+        author_display_name: fb.author_name || fb.profiles?.display_name || 'Unbekannt',
+      })) as (InnovationFeedback & { author_display_name: string })[];
     },
     enabled: !!innovationId,
   });
