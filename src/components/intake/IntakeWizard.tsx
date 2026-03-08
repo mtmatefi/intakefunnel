@@ -716,6 +716,108 @@ export function IntakeWizard() {
             </CardContent>
           </Card>
 
+          {/* AI Classification Card */}
+          {classification && (
+            <Card className="border-primary/30">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">{language === 'de' ? 'KI-Klassifizierung' : 'AI Classification'}</span>
+                  </div>
+                  <Badge variant={classificationConfidence === 'high' ? 'default' : 'secondary'} className="text-xs">
+                    {classificationConfidence === 'high' ? '✅' : classificationConfidence === 'medium' ? '🔶' : '🔸'} {classificationConfidence}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-2">
+                  {(['initiative', 'value_stream_epic', 'epic', 'feature'] as const).map(type => {
+                    const labels: Record<string, { icon: React.ReactNode; label: string }> = {
+                      initiative: { icon: <TrendingUp className="h-3 w-3" />, label: 'Initiative' },
+                      value_stream_epic: { icon: <Layers className="h-3 w-3" />, label: 'Value Stream Epic' },
+                      epic: { icon: <GitBranch className="h-3 w-3" />, label: 'Epic' },
+                      feature: { icon: <Zap className="h-3 w-3" />, label: 'Feature' },
+                    };
+                    const isSelected = (userClassificationOverride || classification) === type;
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          setUserClassificationOverride(type);
+                          setClassification(type);
+                          toast.info(language === 'de' 
+                            ? `Typ auf "${labels[type].label}" geändert` 
+                            : `Type changed to "${labels[type].label}"`);
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2 p-2 rounded-md text-sm transition-colors',
+                          isSelected ? 'bg-primary/15 text-primary font-medium border border-primary/30' : 'hover:bg-muted/50 text-muted-foreground'
+                        )}
+                      >
+                        {labels[type].icon}
+                        {labels[type].label}
+                        {isSelected && <CheckCircle className="h-3 w-3 ml-auto" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {classificationReason && (
+                  <p className="text-xs text-muted-foreground italic">{classificationReason}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Matched Initiatives */}
+          {matchedInitiatives.length > 0 && (
+            <Card className="border-warning/30">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-warning" />
+                  <span className="text-sm font-medium">{language === 'de' ? 'Initiativen-Matches' : 'Initiative Matches'}</span>
+                </div>
+                
+                <div className="space-y-2">
+                  {matchedInitiatives.map(match => {
+                    const isConfirmed = confirmedInitiatives.some(c => c.initiative_id === match.initiative_id);
+                    const scoreColor = match.match_score === 'high' ? 'text-success' : match.match_score === 'medium' ? 'text-warning' : 'text-muted-foreground';
+                    return (
+                      <div key={match.initiative_id} className={cn(
+                        'p-2 rounded-md border text-sm space-y-1',
+                        isConfirmed ? 'border-success/40 bg-success/5' : 'border-border'
+                      )}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className={cn('font-medium text-xs truncate', scoreColor)}>
+                              {match.match_score === 'high' ? '🟢' : match.match_score === 'medium' ? '🟡' : '🟠'} {match.initiative_title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{match.match_reason}</p>
+                          </div>
+                          {!isConfirmed ? (
+                            <Button size="sm" variant="outline" className="shrink-0 text-xs h-7" onClick={() => {
+                              setConfirmedInitiatives(prev => [...prev, match]);
+                              toast.success(language === 'de' 
+                                ? `"${match.initiative_title}" verknüpft` 
+                                : `"${match.initiative_title}" linked`);
+                            }}>
+                              <Link2 className="h-3 w-3 mr-1" />
+                              {language === 'de' ? 'Verknüpfen' : 'Link'}
+                            </Button>
+                          ) : (
+                            <Badge variant="outline" className="text-success border-success/40 text-xs shrink-0">
+                              <CheckCircle className="h-3 w-3 mr-1" /> {language === 'de' ? 'Verknüpft' : 'Linked'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* AI Assistant Info */}
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="pt-4">
