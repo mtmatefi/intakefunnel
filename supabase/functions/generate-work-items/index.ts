@@ -125,10 +125,17 @@ Deno.serve(async (req) => {
 Deine Aufgabe: Aus einer Software-Spezifikation eine hierarchische Aufgliederung in Epics, Features und Stories erstellen.
 
 Regeln:
-- Jedes Epic ist ein großes Arbeitspaket (1-4 Epics)
-- Jedes Feature ist ein fachliches Feature innerhalb eines Epics (1-5 Features pro Epic)
-- Jede Story ist eine einzelne umsetzbare User Story (1-5 Stories pro Feature)
-- Stories müssen im Format "Als [Rolle] möchte ich [Aktion], damit [Nutzen]" sein
+- Jedes Epic ist ein großes Arbeitspaket (1-4 Epics) mit Beschreibung
+- Jedes Feature ist ein fachliches Feature innerhalb eines Epics (1-5 Features pro Epic) mit funktionalen und nicht-funktionalen Anforderungen
+- Jede Story ist eine einzelne umsetzbare User Story (1-5 Stories pro Feature) mit:
+  - Titel im Format "Als [Rolle] möchte ich [Aktion], damit [Nutzen]"
+  - Beschreibung
+  - Acceptance Criteria (testbare Kriterien)
+  - Funktionale Anforderungen
+  - Nicht-funktionale Anforderungen (Performance, Sicherheit, etc.)
+  - Story Points (Fibonacci: 1,2,3,5,8,13)
+  - Priorität (high/medium/low)
+  - Definition of Done
 - Alle Texte auf DEUTSCH
 - Realistische, umsetzbare Aufteilung
 - Berücksichtige die Acceptance Criteria und Risiken aus der Spec`;
@@ -136,7 +143,7 @@ Regeln:
     const specSummary = `
 Problemstellung: ${structuredSpec.problemStatement || "N/A"}
 Ziele: ${(structuredSpec.goals || []).join(", ")}
-Benutzer: ${(structuredSpec.users || []).map((u: any) => `${u.persona} (${u.count})`).join(", ")}
+Benutzer: ${(structuredSpec.users || []).map((u: any) => \`\${u.persona} (\${u.count})\`).join(", ")}
 Integrationen: ${(structuredSpec.integrations || []).map((i: any) => i.system).join(", ")}
 Datenklassifizierung: ${structuredSpec.dataClassification || "N/A"}
 Acceptance Criteria: ${(structuredSpec.acceptanceCriteria || []).map((ac: any) => ac.storyRef + ": " + ac.when).join("; ")}
@@ -146,24 +153,53 @@ NFRs: Verfügbarkeit: ${structuredSpec.nfrs?.availability || "N/A"}, Antwortzeit
 
     console.log("Generating work items for innovation:", innovationId);
 
+    const storySchema = {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        acceptance_criteria: { type: "array", items: { type: "string" } },
+        functional_requirements: { type: "array", items: { type: "string" } },
+        non_functional_requirements: { type: "array", items: { type: "string" } },
+        story_points: { type: "integer", enum: [1, 2, 3, 5, 8, 13] },
+        priority: { type: "string", enum: ["high", "medium", "low"] },
+        definition_of_done: { type: "string" },
+      },
+      required: ["title", "acceptance_criteria"],
+    };
+
+    const featureSchema = {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        functional_requirements: { type: "array", items: { type: "string" } },
+        non_functional_requirements: { type: "array", items: { type: "string" } },
+        priority: { type: "string", enum: ["high", "medium", "low"] },
+        definition_of_done: { type: "string" },
+        stories: { type: "array", items: storySchema },
+      },
+      required: ["title"],
+    };
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: \`Bearer \${LOVABLE_API_KEY}\`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Erstelle eine hierarchische Aufgliederung für folgende Spezifikation:\n\n${specSummary}` },
+          { role: "user", content: \`Erstelle eine hierarchische Aufgliederung für folgende Spezifikation:\n\n\${specSummary}\` },
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "create_work_items",
-              description: "Create hierarchical work item breakdown (Epics → Features → Stories)",
+              description: "Create hierarchical work item breakdown (Epics → Features → Stories) with full details",
               parameters: {
                 type: "object",
                 properties: {
@@ -174,28 +210,8 @@ NFRs: Verfügbarkeit: ${structuredSpec.nfrs?.availability || "N/A"}, Antwortzeit
                       properties: {
                         title: { type: "string" },
                         description: { type: "string" },
-                        features: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              title: { type: "string" },
-                              description: { type: "string" },
-                              stories: {
-                                type: "array",
-                                items: {
-                                  type: "object",
-                                  properties: {
-                                    title: { type: "string" },
-                                    description: { type: "string" },
-                                  },
-                                  required: ["title"],
-                                },
-                              },
-                            },
-                            required: ["title"],
-                          },
-                        },
+                        priority: { type: "string", enum: ["high", "medium", "low"] },
+                        features: { type: "array", items: featureSchema },
                       },
                       required: ["title"],
                     },
