@@ -128,6 +128,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [loadWorkspaces]);
 
+  const notifySculptorWorkspaceEvent = useCallback(async (workspaceId: string, action: "trashed" | "deleted" | "restored") => {
+    try {
+      await supabase.functions.invoke("workspace-event", {
+        body: { workspace_id: workspaceId, action },
+      });
+    } catch (err) {
+      console.error("Sculptor notification failed (non-blocking):", err);
+    }
+  }, []);
+
   const moveToTrash = useCallback(async (workspaceId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -140,12 +150,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(WS_STORAGE_KEY);
       }
       await loadWorkspaces();
+      // Notify Sculptor (non-blocking)
+      notifySculptorWorkspaceEvent(workspaceId, "trashed");
       return true;
     } catch (err) {
       console.error("Move to trash failed:", err);
       return false;
     }
-  }, [loadWorkspaces, workspace]);
+  }, [loadWorkspaces, workspace, notifySculptorWorkspaceEvent]);
 
   const restoreFromTrash = useCallback(async (workspaceId: string): Promise<boolean> => {
     try {
@@ -155,15 +167,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         .eq("id", workspaceId);
       if (error) throw error;
       await loadWorkspaces();
+      notifySculptorWorkspaceEvent(workspaceId, "restored");
       return true;
     } catch (err) {
       console.error("Restore failed:", err);
       return false;
     }
-  }, [loadWorkspaces]);
+  }, [loadWorkspaces, notifySculptorWorkspaceEvent]);
 
   const permanentlyDelete = useCallback(async (workspaceId: string): Promise<boolean> => {
     try {
+      // Notify Sculptor BEFORE deleting (we still have the workspace data)
+      await notifySculptorWorkspaceEvent(workspaceId, "deleted");
       // Delete members first, then workspace
       await supabase.from("workspace_members").delete().eq("workspace_id", workspaceId);
       const { error } = await supabase.from("workspaces").delete().eq("id", workspaceId);
@@ -174,7 +189,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       console.error("Permanent delete failed:", err);
       return false;
     }
-  }, [loadWorkspaces]);
+  }, [loadWorkspaces, notifySculptorWorkspaceEvent]);
 
   const createWorkspace = useCallback(async (name: string, description?: string, syncToSculptor?: boolean): Promise<Workspace | null> => {
     if (!user) return null;
