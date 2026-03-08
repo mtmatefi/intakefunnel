@@ -18,10 +18,11 @@ import {
   MessageSquare,
   Plus,
   AlertTriangle,
+  Pencil,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import type { GuidelineInsert } from '@/hooks/useGuidelines';
+import type { Guideline, GuidelineInsert } from '@/hooks/useGuidelines';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -41,8 +42,10 @@ interface ParsedGuideline {
 
 interface Props {
   onSave: (data: GuidelineInsert) => void;
+  onUpdate?: (data: Partial<Guideline> & { id: string }) => void;
   userId: string;
   onClose: () => void;
+  editingGuideline?: Guideline | null;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-guideline`;
@@ -69,7 +72,7 @@ function stripGuidelineBlock(content: string): string {
   return content.replace(/```guideline-json[\s\S]*?```/g, '').trim();
 }
 
-export function GuidelineChatCreator({ onSave, userId, onClose }: Props) {
+export function GuidelineChatCreator({ onSave, onUpdate, userId, onClose, editingGuideline: existingGuideline }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -80,6 +83,34 @@ export function GuidelineChatCreator({ onSave, userId, onClose }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isEditing = !!existingGuideline;
+  const initRef = useRef(false);
+
+  // Initialize editing mode with existing guideline context
+  useEffect(() => {
+    if (existingGuideline && !initRef.current) {
+      initRef.current = true;
+      const guidelineJson: ParsedGuideline = {
+        name: existingGuideline.name,
+        description: existingGuideline.description || undefined,
+        type: existingGuideline.type,
+        compliance_framework: existingGuideline.compliance_framework,
+        severity: existingGuideline.severity,
+        risk_categories: existingGuideline.risk_categories || [],
+        review_frequency_days: existingGuideline.review_frequency_days,
+        content_markdown: existingGuideline.content_markdown,
+      };
+      setParsedGuideline(guidelineJson);
+
+      // Seed the chat with the existing guideline as assistant context
+      const contextMsg: ChatMessage = {
+        role: 'assistant',
+        content: `Ich habe die bestehende Guideline **"${existingGuideline.name}"** geladen. Du kannst sie jetzt per Chat überarbeiten.\n\nSag mir z.B.:\n- "Erweitere den Security-Abschnitt"\n- "Füge OWASP Top 10 Referenzen hinzu"\n- "Ändere den Schweregrad auf kritisch"\n- "Ergänze Risikokategorien für Cloud Security"\n\n\`\`\`guideline-json\n${JSON.stringify(guidelineJson, null, 2)}\n\`\`\``,
+      };
+      setMessages([contextMsg]);
+    }
+  }, [existingGuideline]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -245,17 +276,31 @@ export function GuidelineChatCreator({ onSave, userId, onClose }: Props) {
       return;
     }
 
-    onSave({
-      name: parsedGuideline.name,
-      description: parsedGuideline.description,
-      content_markdown: parsedGuideline.content_markdown,
-      type: parsedGuideline.type || 'policy',
-      compliance_framework: parsedGuideline.compliance_framework || 'general',
-      severity: parsedGuideline.severity || 'medium',
-      risk_categories: parsedGuideline.risk_categories || [],
-      review_frequency_days: parsedGuideline.review_frequency_days || 365,
-      created_by: userId,
-    });
+    if (isEditing && existingGuideline && onUpdate) {
+      onUpdate({
+        id: existingGuideline.id,
+        name: parsedGuideline.name,
+        description: parsedGuideline.description || null,
+        content_markdown: parsedGuideline.content_markdown,
+        type: parsedGuideline.type || 'policy',
+        compliance_framework: parsedGuideline.compliance_framework || 'general',
+        severity: parsedGuideline.severity || 'medium',
+        risk_categories: parsedGuideline.risk_categories || [],
+        review_frequency_days: parsedGuideline.review_frequency_days || 365,
+      } as any);
+    } else {
+      onSave({
+        name: parsedGuideline.name,
+        description: parsedGuideline.description,
+        content_markdown: parsedGuideline.content_markdown,
+        type: parsedGuideline.type || 'policy',
+        compliance_framework: parsedGuideline.compliance_framework || 'general',
+        severity: parsedGuideline.severity || 'medium',
+        risk_categories: parsedGuideline.risk_categories || [],
+        review_frequency_days: parsedGuideline.review_frequency_days || 365,
+        created_by: userId,
+      });
+    }
   };
 
   const severityColors: Record<string, string> = {
@@ -273,8 +318,10 @@ export function GuidelineChatCreator({ onSave, userId, onClose }: Props) {
           <CardHeader className="pb-3 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base">KI Guideline-Assistent</CardTitle>
+                {isEditing ? <Pencil className="h-5 w-5 text-primary" /> : <MessageSquare className="h-5 w-5 text-primary" />}
+                <CardTitle className="text-base">
+                  {isEditing ? `Bearbeiten: ${existingGuideline?.name}` : 'KI Guideline-Assistent'}
+                </CardTitle>
               </div>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
@@ -444,7 +491,7 @@ export function GuidelineChatCreator({ onSave, userId, onClose }: Props) {
               {parsedGuideline?.name && (
                 <Button size="sm" onClick={handleSaveGuideline} className="gap-1.5">
                   <Check className="h-3.5 w-3.5" />
-                  Speichern
+                  {isEditing ? 'Aktualisieren' : 'Speichern'}
                 </Button>
               )}
             </div>

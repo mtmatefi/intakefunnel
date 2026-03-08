@@ -38,6 +38,7 @@ export default function PoliciesPage() {
   const [editingGuideline, setEditingGuideline] = useState<Guideline | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState(false);
+  const [chatEditGuideline, setChatEditGuideline] = useState<Guideline | null>(null);
 
   const { data: guidelines = [], isLoading } = useGuidelines();
   const createMutation = useCreateGuideline();
@@ -108,16 +109,28 @@ export default function PoliciesPage() {
 
   return (
     <AppLayout>
-      {chatMode ? (
+      {chatMode || chatEditGuideline ? (
         <div className="p-6 max-w-7xl">
           <GuidelineChatCreator
             userId={user.id}
-            onClose={() => setChatMode(false)}
+            editingGuideline={chatEditGuideline}
+            onClose={() => { setChatMode(false); setChatEditGuideline(null); }}
             onSave={(data) => {
               createMutation.mutate(data, {
                 onSuccess: () => {
                   toast.success('Guideline per Chat erstellt!');
                   setChatMode(false);
+                  setChatEditGuideline(null);
+                },
+                onError: (err) => toast.error('Fehler: ' + err.message),
+              });
+            }}
+            onUpdate={(data) => {
+              updateMutation.mutate(data as any, {
+                onSuccess: () => {
+                  toast.success('Guideline per Chat aktualisiert!');
+                  setChatMode(false);
+                  setChatEditGuideline(null);
                 },
                 onError: (err) => toast.error('Fehler: ' + err.message),
               });
@@ -202,6 +215,7 @@ export default function PoliciesPage() {
                   key={g.id}
                   guideline={g}
                   onEdit={(g) => { setEditingGuideline(g); setEditorOpen(true); }}
+                  onChatEdit={(g) => { setChatEditGuideline(g); }}
                   onDelete={setDeleteId}
                   onToggleActive={handleToggleActive}
                 />

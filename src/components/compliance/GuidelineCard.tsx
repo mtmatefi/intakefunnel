@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Pencil, Trash2, Link2, Clock, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Link2, Clock, AlertTriangle, MessageSquare } from 'lucide-react';
 import type { Guideline } from '@/hooks/useGuidelines';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -30,11 +30,12 @@ const frameworkLabels: Record<string, string> = {
 interface Props {
   guideline: Guideline;
   onEdit: (g: Guideline) => void;
+  onChatEdit?: (g: Guideline) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, active: boolean) => void;
 }
 
-export function GuidelineCard({ guideline, onEdit, onDelete, onToggleActive }: Props) {
+export function GuidelineCard({ guideline, onEdit, onChatEdit, onDelete, onToggleActive }: Props) {
   const isOverdue = guideline.last_reviewed_at
     ? new Date().getTime() - new Date(guideline.last_reviewed_at).getTime() >
       guideline.review_frequency_days * 86400000
@@ -101,6 +102,11 @@ export function GuidelineCard({ guideline, onEdit, onDelete, onToggleActive }: P
         </div>
 
         <div className="flex justify-end gap-2 mt-3">
+          {onChatEdit && (
+            <Button variant="ghost" size="sm" onClick={() => onChatEdit(guideline)}>
+              <MessageSquare className="h-3.5 w-3.5 mr-1" /> Chat-Edit
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => onEdit(guideline)}>
             <Pencil className="h-3.5 w-3.5 mr-1" /> Bearbeiten
           </Button>
