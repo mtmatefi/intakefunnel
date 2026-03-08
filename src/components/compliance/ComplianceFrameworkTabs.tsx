@@ -205,15 +205,16 @@ interface Props {
 export function ComplianceFrameworkTabs({ value, onChange }: Props) {
   return (
     <Tabs value={value} onValueChange={onChange}>
-      <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+      <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1 overflow-x-auto">
         {COMPLIANCE_FRAMEWORKS.map((fw) => (
           <TabsTrigger
             key={fw.id}
             value={fw.id}
-            className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            className="gap-1 sm:gap-1.5 text-[10px] sm:text-xs whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
           >
-            <fw.icon className="h-3.5 w-3.5" />
-            {fw.label}
+            <fw.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+            <span className="hidden sm:inline">{fw.label}</span>
+            <span className="sm:hidden">{fw.label.length > 8 ? fw.label.slice(0, 6) + '…' : fw.label}</span>
           </TabsTrigger>
         ))}
       </TabsList>

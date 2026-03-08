@@ -78,7 +78,7 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -188,14 +188,15 @@ export default function DashboardPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[300px]">Titel</TableHead>
+                    <TableHead className="min-w-[200px] sm:w-[300px]">Titel</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Priorität</TableHead>
-                    <TableHead>WSJF</TableHead>
-                    <TableHead>Aktualisiert</TableHead>
+                    <TableHead className="hidden sm:table-cell">Priorität</TableHead>
+                    <TableHead className="hidden md:table-cell">WSJF</TableHead>
+                    <TableHead className="hidden md:table-cell">Aktualisiert</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -236,19 +237,19 @@ export default function DashboardPage() {
                           </TableCell>
                           <TableCell>
                             {intake.priority && (
-                              <span className={cn('px-2 py-1 text-xs font-medium capitalize rounded', priorityColors[intake.priority as keyof typeof priorityColors])}>
+                              <span className={cn('hidden sm:inline-block px-2 py-1 text-xs font-medium capitalize rounded', priorityColors[intake.priority as keyof typeof priorityColors])}>
                                 {intake.priority}
                               </span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {score ? (
                               <span className="text-sm font-bold">{Number(score.wsjf_score).toFixed(1)}</span>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                             {new Date(intake.updated_at).toLocaleDateString('de-DE')}
                           </TableCell>
                           <TableCell>
@@ -264,6 +265,7 @@ export default function DashboardPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -275,7 +277,7 @@ export default function DashboardPage() {
             <CardDescription>So werden Intakes basierend auf Komplexität und Anforderungen geroutet</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {Object.entries(deliveryPathInfo).map(([key, info]) => (
                 <div key={key} className="flex items-start gap-2 p-2 border border-border rounded">
                   <div className="w-3 h-3 mt-1 flex-shrink-0 rounded-full" style={{ backgroundColor: `hsl(var(--${info.color}))` }} />

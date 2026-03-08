@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,6 +64,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, isImpersonating, switchRole, stopImpersonating, logout } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   if (!user) {
     return <>{children}</>;
@@ -79,9 +81,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       {/* Impersonation Banner */}
       {isImpersonating && (
-        <div className="bg-warning text-warning-foreground px-4 py-2 flex items-center justify-center gap-4">
+        <div className="bg-warning text-warning-foreground px-4 py-2 flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
           <UserCog className="h-4 w-4" />
-          <span className="text-sm font-medium">
+          <span className="text-xs sm:text-sm font-medium">
             Sie sehen die App als <strong>{roleLabels[user.role]}</strong>
           </span>
           <Button
@@ -98,16 +100,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-card shadow-sm">
-        <div className="flex h-16 items-center justify-between px-6">
-          <div className="flex items-center gap-8">
+        <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-8">
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden p-1.5 rounded-md hover:bg-muted/50"
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+              aria-label="Navigation öffnen"
+            >
+              {mobileNavOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+
             <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center bg-primary text-primary-foreground font-bold">
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center bg-primary text-primary-foreground font-bold text-sm sm:text-base">
                 AI
               </div>
-              <span className="text-lg font-semibold text-foreground">Intake Router</span>
+              <span className="hidden sm:inline text-lg font-semibold text-foreground">Intake Router</span>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-0.5 lg:gap-1">
               {visibleNavigation.map((item) => {
                 const isActive =
                   location.pathname === item.href ||
@@ -117,28 +134,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     key={item.name}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors",
+                      "flex items-center gap-1.5 px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-colors whitespace-nowrap",
                       isActive
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="hidden lg:inline">{item.name}</span>
                   </Link>
                 );
               })}
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Role Switcher (Admin only) */}
             {isAdmin && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Badge variant={roleBadgeVariants[user.role]}>{roleLabels[user.role]}</Badge>
-                    {isImpersonating && <span className="text-xs text-muted-foreground">(Impersonation)</span>}
+                  <Button variant="outline" size="sm" className="gap-1 sm:gap-2 h-8 text-xs sm:text-sm">
+                    <Badge variant={roleBadgeVariants[user.role]} className="hidden sm:inline-flex">{roleLabels[user.role]}</Badge>
+                    <Badge variant={roleBadgeVariants[user.role]} className="sm:hidden text-xs">{roleLabels[user.role].slice(0, 3)}</Badge>
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -164,15 +181,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Non-admin role badge */}
-            {!isAdmin && <Badge variant={roleBadgeVariants[user.role]}>{roleLabels[user.role]}</Badge>}
+            {!isAdmin && <Badge variant={roleBadgeVariants[user.role]} className="hidden sm:inline-flex">{roleLabels[user.role]}</Badge>}
 
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 px-2">
-                  <Avatar className="h-8 w-8">
+                <Button variant="ghost" className="gap-2 px-1.5 sm:px-2">
+                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                     <AvatarImage src={user.avatarUrl} />
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">
+                    <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
                       {user.displayName
                         .split(" ")
                         .map((n) => n[0])
@@ -207,6 +224,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileNavOpen && (
+          <nav className="md:hidden border-t border-border bg-card px-3 py-2 space-y-1">
+            {visibleNavigation.map((item) => {
+              const isActive =
+                location.pathname === item.href ||
+                (item.href !== "/dashboard" && location.pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setMobileNavOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
       </header>
 
       {/* Main Content */}

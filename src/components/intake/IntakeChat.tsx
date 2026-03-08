@@ -279,7 +279,7 @@ export function IntakeChat({ intakeId, intakeTitle, userId, userRole }: Props) {
 
   return (
     <div className="space-y-4">
-      <Card className="flex flex-col" style={{ height: 'calc(100vh - 24rem)' }}>
+      <Card className="flex flex-col" style={{ height: 'min(calc(100vh - 24rem), 600px)' }}>
         <CardHeader className="pb-3 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
