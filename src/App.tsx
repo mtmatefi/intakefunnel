@@ -68,6 +68,7 @@ function AppRoutes() {
       <Route path="/admin/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/tutorials" element={<ProtectedRoute><TutorialsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
