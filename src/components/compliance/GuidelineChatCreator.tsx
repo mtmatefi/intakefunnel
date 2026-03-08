@@ -276,17 +276,31 @@ export function GuidelineChatCreator({ onSave, onUpdate, userId, onClose, editin
       return;
     }
 
-    onSave({
-      name: parsedGuideline.name,
-      description: parsedGuideline.description,
-      content_markdown: parsedGuideline.content_markdown,
-      type: parsedGuideline.type || 'policy',
-      compliance_framework: parsedGuideline.compliance_framework || 'general',
-      severity: parsedGuideline.severity || 'medium',
-      risk_categories: parsedGuideline.risk_categories || [],
-      review_frequency_days: parsedGuideline.review_frequency_days || 365,
-      created_by: userId,
-    });
+    if (isEditing && existingGuideline && onUpdate) {
+      onUpdate({
+        id: existingGuideline.id,
+        name: parsedGuideline.name,
+        description: parsedGuideline.description || null,
+        content_markdown: parsedGuideline.content_markdown,
+        type: parsedGuideline.type || 'policy',
+        compliance_framework: parsedGuideline.compliance_framework || 'general',
+        severity: parsedGuideline.severity || 'medium',
+        risk_categories: parsedGuideline.risk_categories || [],
+        review_frequency_days: parsedGuideline.review_frequency_days || 365,
+      } as any);
+    } else {
+      onSave({
+        name: parsedGuideline.name,
+        description: parsedGuideline.description,
+        content_markdown: parsedGuideline.content_markdown,
+        type: parsedGuideline.type || 'policy',
+        compliance_framework: parsedGuideline.compliance_framework || 'general',
+        severity: parsedGuideline.severity || 'medium',
+        risk_categories: parsedGuideline.risk_categories || [],
+        review_frequency_days: parsedGuideline.review_frequency_days || 365,
+        created_by: userId,
+      });
+    }
   };
 
   const severityColors: Record<string, string> = {
