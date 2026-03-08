@@ -125,12 +125,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 h-14 shrink-0">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/40">
-          <span className="text-primary font-bold text-sm">AI</span>
+      <div className="flex items-center gap-3 px-5 h-14 shrink-0 border-b border-border/50">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-primary/50 bg-primary/5">
+          <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
         </div>
         {!sidebarCollapsed && (
-          <span className="font-serif text-[17px] text-primary tracking-wide">
+          <span className="font-serif text-lg text-primary leading-none">
             Intake Router
           </span>
         )}
