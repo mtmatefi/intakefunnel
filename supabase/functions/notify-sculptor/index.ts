@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
       { data: routingScores },
       { data: specs },
       { data: jiraExports },
+      { data: guidelines },
     ] = await Promise.all([
       db.from("initiative_intake_links").select("*").eq("intake_id", intake_id),
       db.from("intakes").select("*").eq("id", intake_id).single(),
@@ -68,6 +69,7 @@ Deno.serve(async (req) => {
       db.from("routing_scores").select("*").eq("intake_id", intake_id),
       db.from("spec_documents").select("*").eq("intake_id", intake_id).order("version", { ascending: false }).limit(1).maybeSingle(),
       db.from("jira_exports").select("*").eq("intake_id", intake_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("guidelines").select("*").eq("is_active", true),
     ]);
 
     if (!links || links.length === 0) {
@@ -145,6 +147,67 @@ Deno.serve(async (req) => {
         epic_key: jiraExports.epic_key,
         jpd_issue_key: jiraExports.jpd_issue_key,
         jsm_request_key: jiraExports.jsm_request_key,
+      };
+    }
+
+    // Compliance & Governance assessment for risk/trend weighting
+    if (guidelines && guidelines.length > 0) {
+      // Extract compliance assessment from spec if available
+      const structured = specs?.structured_json as Record<string, any> || {};
+      const specCompliance = structured.complianceAssessment || [];
+
+      // Group guidelines by framework
+      const frameworkMap: Record<string, any[]> = {};
+      for (const g of guidelines) {
+        const fw = g.compliance_framework || "general";
+        if (!frameworkMap[fw]) frameworkMap[fw] = [];
+        frameworkMap[fw].push({
+          id: g.id,
+          name: g.name,
+          type: g.type,
+          severity: g.severity,
+          risk_categories: g.risk_categories || [],
+          linked_initiative_ids: g.linked_initiative_ids || [],
+          review_status: g.last_reviewed_at
+            ? (Date.now() - new Date(g.last_reviewed_at).getTime() > (g.review_frequency_days || 365) * 86400000 ? "overdue" : "current")
+            : "never_reviewed",
+        });
+      }
+
+      // Match spec compliance status to guidelines
+      const complianceAssessment = Object.entries(frameworkMap).map(([framework, items]) => {
+        const specEntry = specCompliance.find((s: any) => s.framework?.toLowerCase() === framework.toLowerCase());
+        const criticalCount = items.filter((i: any) => i.severity === "critical").length;
+        const highCount = items.filter((i: any) => i.severity === "high").length;
+
+        return {
+          framework,
+          guideline_count: items.length,
+          critical_guidelines: criticalCount,
+          high_guidelines: highCount,
+          status: specEntry?.status || (criticalCount > 0 ? "requires_assessment" : "pending"),
+          required_actions: specEntry?.requiredActions || items
+            .filter((i: any) => i.severity === "critical" || i.severity === "high")
+            .map((i: any) => i.name),
+          risk_categories: [...new Set(items.flatMap((i: any) => i.risk_categories))],
+          guidelines: items,
+        };
+      });
+
+      // Compute overall risk weight modifier for Strategy Sculptor
+      const totalCritical = complianceAssessment.reduce((sum, ca) => sum + ca.critical_guidelines, 0);
+      const totalHigh = complianceAssessment.reduce((sum, ca) => sum + ca.high_guidelines, 0);
+      const riskWeightModifier = 1 + (totalCritical * 0.15) + (totalHigh * 0.08);
+
+      enrichment.compliance_assessment = {
+        frameworks: complianceAssessment,
+        summary: {
+          total_active_guidelines: guidelines.length,
+          total_critical: totalCritical,
+          total_high: totalHigh,
+          risk_weight_modifier: Math.round(riskWeightModifier * 100) / 100,
+          assessed_at: new Date().toISOString(),
+        },
       };
     }
 
