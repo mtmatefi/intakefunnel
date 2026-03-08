@@ -259,7 +259,7 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
 
 
   useEffect(() => {
-    if (!innovationContext && !hasRestoredRef.current && hasSavedState()) {
+    if (!hasRestoredRef.current && hasSavedState()) {
       setShowRestoreDialog(true);
     }
   }, [hasSavedState]);
