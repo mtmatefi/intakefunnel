@@ -72,7 +72,7 @@ function stripGuidelineBlock(content: string): string {
   return content.replace(/```guideline-json[\s\S]*?```/g, '').trim();
 }
 
-export function GuidelineChatCreator({ onSave, userId, onClose }: Props) {
+export function GuidelineChatCreator({ onSave, onUpdate, userId, onClose, editingGuideline: existingGuideline }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
