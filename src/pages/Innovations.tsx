@@ -102,6 +102,69 @@ function InnovationCard({ innovation, onClick, unreadCount, isNew }: { innovatio
   );
 }
 
+// ── Work Item Tree View ──
+const ITEM_TYPE_ICONS: Record<string, string> = { epic: "📦", feature: "✨", story: "📝" };
+const ITEM_TYPE_LABELS: Record<string, string> = { epic: "Epic", feature: "Feature", story: "Story" };
+const JIRA_STATUS_COLORS: Record<string, string> = {
+  "To Do": "bg-muted text-muted-foreground",
+  "In Progress": "bg-primary/20 text-primary",
+  "Done": "bg-emerald-500/20 text-emerald-400",
+};
+
+function WorkItemNode({ item, depth = 0 }: { item: WorkItemTree; depth?: number }) {
+  return (
+    <div>
+      <div
+        className={cn(
+          "flex items-center gap-2 py-1.5 px-2 rounded text-sm hover:bg-secondary/40 transition-colors",
+        )}
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      >
+        <span className="text-xs">{ITEM_TYPE_ICONS[item.item_type] || "📋"}</span>
+        <span className="flex-1 truncate">{item.title}</span>
+        {item.jira_issue_key ? (
+          <a
+            href={item.jira_issue_url || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-[10px] font-mono text-primary hover:underline shrink-0"
+          >
+            {item.jira_issue_key}
+            <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        ) : (
+          <Badge variant="outline" className="text-[9px] h-4 px-1.5 text-muted-foreground">
+            {ITEM_TYPE_LABELS[item.item_type]}
+          </Badge>
+        )}
+        {item.jira_status && (
+          <Badge variant="secondary" className={cn("text-[9px] h-4 px-1.5", JIRA_STATUS_COLORS[item.jira_status] || "")}>
+            {item.jira_status}
+          </Badge>
+        )}
+      </div>
+      {item.children.length > 0 && (
+        <div className="border-l border-border/30 ml-4">
+          {item.children.map((child) => (
+            <WorkItemNode key={child.id} item={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorkItemTreeView({ items }: { items: WorkItemTree[] }) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/30 divide-y divide-border/30">
+      {items.map((item) => (
+        <WorkItemNode key={item.id} item={item} />
+      ))}
+    </div>
+  );
+}
+
 // ── Detail Sheet ──
 function InnovationDetailSheet({
   innovation,
