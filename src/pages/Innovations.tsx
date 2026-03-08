@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { WorkItemDetailView } from "@/components/work-items/WorkItemDetailView";
 import { useInnovations, useInnovationFeedback, useAddInnovationFeedback, useFetchInnovationsFromSculptor } from "@/hooks/useInnovations";
 import { useWorkItemTree, useExportWorkItemsToJira } from "@/hooks/useWorkItems";
 import type { WorkItemTree } from "@/hooks/useWorkItems";
@@ -264,6 +265,7 @@ function InnovationDetailSheet({
   const addFeedback = useAddInnovationFeedback();
   const [comment, setComment] = useState("");
   const [jiraProjectKey, setJiraProjectKey] = useState("");
+  const [showWorkItemDetail, setShowWorkItemDetail] = useState(false);
 
   // Mark as read when sheet opens
   useEffect(() => {
@@ -439,9 +441,16 @@ function InnovationDetailSheet({
 
           {/* Work Items (Epics/Features/Stories) */}
           <div>
-            <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5">
-              <GitBranch className="h-4 w-4" /> Epics, Features & Stories
-            </h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium flex items-center gap-1.5">
+                <GitBranch className="h-4 w-4" /> Epics, Features & Stories
+              </h4>
+              {workItems.length > 0 && (
+                <Button variant="outline" size="sm" className="text-xs h-7 gap-1" onClick={() => setShowWorkItemDetail(true)}>
+                  <LayoutGrid className="h-3 w-3" /> Detail-Ansicht
+                </Button>
+              )}
+            </div>
             {wiLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Laden...
@@ -485,6 +494,15 @@ function InnovationDetailSheet({
               </>
             )}
           </div>
+
+          {/* Work Item Detail Overlay */}
+          {showWorkItemDetail && (
+            <WorkItemDetailView
+              tree={workItemTree}
+              innovationTitle={innovation.title}
+              onClose={() => setShowWorkItemDetail(false)}
+            />
+          )}
 
           <Separator />
 
