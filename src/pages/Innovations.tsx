@@ -265,6 +265,7 @@ function InnovationDetailSheet({
   const addFeedback = useAddInnovationFeedback();
   const [comment, setComment] = useState("");
   const [jiraProjectKey, setJiraProjectKey] = useState("");
+  const [showWorkItemDetail, setShowWorkItemDetail] = useState(false);
 
   // Mark as read when sheet opens
   useEffect(() => {
