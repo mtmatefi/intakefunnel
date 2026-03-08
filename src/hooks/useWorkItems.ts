@@ -110,3 +110,15 @@ export function useTranslateWorkItems() {
     },
   });
 }
+
+export function usePublishDeliveryPackage() {
+  return useMutation({
+    mutationFn: async ({ innovationId }: { innovationId: string }) => {
+      const { data, error } = await supabase.functions.invoke('publish-delivery-package', {
+        body: { innovationId },
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}

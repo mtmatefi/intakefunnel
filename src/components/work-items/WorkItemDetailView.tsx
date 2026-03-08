@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { WorkItemTree } from "@/hooks/useWorkItems";
-import { useTranslateWorkItems } from "@/hooks/useWorkItems";
+import { useTranslateWorkItems, usePublishDeliveryPackage } from "@/hooks/useWorkItems";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   ChevronDown, ChevronRight, ExternalLink, GitBranch,
   CheckCircle2, ListChecks, ShieldCheck, Gauge, Target, X,
-  Languages, Loader2,
+  Languages, Loader2, Send,
 } from "lucide-react";
 
 const ITEM_TYPE_ICONS: Record<string, string> = { epic: "📦", feature: "✨", story: "📝" };
@@ -297,6 +297,7 @@ export function WorkItemDetailView({
 }) {
   const [selected, setSelected] = useState<WorkItemTree | null>(null);
   const translateMutation = useTranslateWorkItems();
+  const publishMutation = usePublishDeliveryPackage();
 
   const allItemIds = flattenTree(tree).map((i) => i.id);
 
@@ -327,6 +328,21 @@ export function WorkItemDetailView({
     }
   };
 
+  const handlePublish = async () => {
+    try {
+      const result = await publishMutation.mutateAsync({ innovationId });
+      if (result.success) {
+        toast.success(result.sent
+          ? "Delivery Package an Strategy Sculptor gesendet"
+          : "Delivery Package erstellt (Sculptor nicht konfiguriert)");
+      } else {
+        toast.error("Sculptor hat das Package abgelehnt");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Publish fehlgeschlagen");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Top bar */}
@@ -337,6 +353,15 @@ export function WorkItemDetailView({
         </div>
         <div className="flex items-center gap-2">
           <Button
+            size="sm"
+            className="gap-1.5 text-xs"
+            disabled={publishMutation.isPending || allItemIds.length === 0}
+            onClick={handlePublish}
+          >
+            {publishMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Delivery Package publizieren
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs"
@@ -344,7 +369,7 @@ export function WorkItemDetailView({
             onClick={handleTranslateAll}
           >
             {translateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
-            Alle übersetzen (EN)
+            Übersetzen (EN)
           </Button>
           <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5">
             <X className="h-4 w-4" /> Schließen
