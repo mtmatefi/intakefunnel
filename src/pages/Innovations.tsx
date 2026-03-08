@@ -66,6 +66,11 @@ function InnovationCard({ innovation, onClick, unreadCount, isNew }: { innovatio
         isImplement ? "border-emerald-500/30 hover:border-emerald-500/50" : "border-border/50 hover:border-primary/30"
       )}
     >
+      {isNew && (
+        <span className="absolute -top-1.5 -left-1.5 flex h-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[8px] font-bold px-1.5 z-10">
+          NEU
+        </span>
+      )}
       {unreadCount > 0 && (
         <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1 z-10">
           {unreadCount}
