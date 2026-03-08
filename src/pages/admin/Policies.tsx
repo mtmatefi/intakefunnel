@@ -11,6 +11,7 @@ import { ComplianceStats } from '@/components/compliance/ComplianceStats';
 import { GuidelineCard } from '@/components/compliance/GuidelineCard';
 import { GuidelineEditorDialog } from '@/components/compliance/GuidelineEditorDialog';
 import { GuidelineChatCreator } from '@/components/compliance/GuidelineChatCreator';
+import { useVersionedGuidelineUpdate } from '@/hooks/useGuidelineVersions';
 import {
   useGuidelines,
   useCreateGuideline,
@@ -43,6 +44,7 @@ export default function PoliciesPage() {
   const { data: guidelines = [], isLoading } = useGuidelines();
   const createMutation = useCreateGuideline();
   const updateMutation = useUpdateGuideline();
+  const versionedUpdate = useVersionedGuidelineUpdate();
   const deleteMutation = useDeleteGuideline();
 
   if (!user || (user.role !== 'admin' && user.role !== 'architect')) {
@@ -126,9 +128,16 @@ export default function PoliciesPage() {
               });
             }}
             onUpdate={(data) => {
-              updateMutation.mutate(data as any, {
+              const { id, ...updates } = data;
+              versionedUpdate.mutate({
+                guidelineId: id,
+                updates,
+                changedBy: user.id,
+                changeReason: 'Chat-basierte Überarbeitung',
+                changeSource: 'guideline_chat',
+              }, {
                 onSuccess: () => {
-                  toast.success('Guideline per Chat aktualisiert!');
+                  toast.success('Guideline per Chat aktualisiert (versioniert)!');
                   setChatMode(false);
                   setChatEditGuideline(null);
                 },

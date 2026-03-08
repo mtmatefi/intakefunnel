@@ -26,6 +26,7 @@ import { JiraSyncPanel } from '@/components/jira/JiraSyncPanel';
 import { ImpactScoreCard } from '@/components/intake/ImpactScoreCard';
 import { ApprovalDialog } from '@/components/intake/ApprovalDialog';
 import { InitiativeLinkCard } from '@/components/intake/InitiativeLinkCard';
+import { IntakeChat } from '@/components/intake/IntakeChat';
 
 export default function IntakeDetailPage() {
   const { id } = useParams();
@@ -255,9 +256,10 @@ export default function IntakeDetailPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="spec" className="gap-2"><FileText className="h-4 w-4" />Spezifikation</TabsTrigger>
-            <TabsTrigger value="transcript" className="gap-2"><MessageSquare className="h-4 w-4" />Transkript</TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2"><MessageSquare className="h-4 w-4" />Chat</TabsTrigger>
+            <TabsTrigger value="transcript" className="gap-2"><History className="h-4 w-4" />Transkript</TabsTrigger>
             <TabsTrigger value="routing" className="gap-2"><Route className="h-4 w-4" />Routing</TabsTrigger>
           </TabsList>
 
@@ -496,6 +498,18 @@ export default function IntakeDetailPage() {
                   </Card>
                 </div>
               </>
+            )}
+          </TabsContent>
+
+          {/* Chat Tab */}
+          <TabsContent value="chat">
+            {id && user && (
+              <IntakeChat
+                intakeId={id}
+                intakeTitle={intake.title}
+                userId={user.id}
+                userRole={user.role}
+              />
             )}
           </TabsContent>
 
