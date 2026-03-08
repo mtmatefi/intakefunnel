@@ -152,7 +152,6 @@ Deno.serve(async (req) => {
 
     // Compliance & Governance assessment for risk/trend weighting
     if (guidelines && guidelines.length > 0) {
-      // Extract compliance assessment from spec if available
       const structured = specs?.structured_json as Record<string, any> || {};
       const specCompliance = structured.complianceAssessment || [];
 
@@ -174,12 +173,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Match spec compliance status to guidelines
       const complianceAssessment = Object.entries(frameworkMap).map(([framework, items]) => {
         const specEntry = specCompliance.find((s: any) => s.framework?.toLowerCase() === framework.toLowerCase());
         const criticalCount = items.filter((i: any) => i.severity === "critical").length;
         const highCount = items.filter((i: any) => i.severity === "high").length;
-
         return {
           framework,
           guideline_count: items.length,
@@ -194,7 +191,6 @@ Deno.serve(async (req) => {
         };
       });
 
-      // Compute overall risk weight modifier for Strategy Sculptor
       const totalCritical = complianceAssessment.reduce((sum, ca) => sum + ca.critical_guidelines, 0);
       const totalHigh = complianceAssessment.reduce((sum, ca) => sum + ca.high_guidelines, 0);
       const riskWeightModifier = 1 + (totalCritical * 0.15) + (totalHigh * 0.08);
@@ -208,6 +204,94 @@ Deno.serve(async (req) => {
           risk_weight_modifier: Math.round(riskWeightModifier * 100) / 100,
           assessed_at: new Date().toISOString(),
         },
+      };
+
+      // === SECURITY POSTURE ===
+      const securityGuidelines = frameworkMap["security"] || [];
+      const specNfrs = structured.non_functional_requirements || [];
+      const securityNfrs = specNfrs.filter((n: any) =>
+        typeof n === "string" ? /secur|encrypt|auth|access|zero.trust|owasp|pentest/i.test(n) : false
+      );
+      enrichment.security_posture = {
+        active_guidelines: securityGuidelines.length,
+        critical_controls: securityGuidelines.filter((g: any) => g.severity === "critical").length,
+        high_controls: securityGuidelines.filter((g: any) => g.severity === "high").length,
+        risk_categories: [...new Set(securityGuidelines.flatMap((g: any) => g.risk_categories))],
+        overdue_reviews: securityGuidelines.filter((g: any) => g.review_status === "overdue").length,
+        spec_security_requirements: securityNfrs,
+        data_classification: structured.data_classification || null,
+        threat_frameworks: securityGuidelines
+          .filter((g: any) => /threat|stride|dread|owasp/i.test(g.type || ""))
+          .map((g: any) => ({ name: g.name, severity: g.severity })),
+        compliance_status: complianceAssessment.find(c => c.framework === "security")?.status || "not_applicable",
+        weight_factor: 1 + (securityGuidelines.filter((g: any) => g.severity === "critical").length * 0.2)
+          + (securityGuidelines.filter((g: any) => g.severity === "high").length * 0.1),
+      };
+
+      // === ARCHITECTURE ASSESSMENT (Enterprise + Solution) ===
+      const eaGuidelines = frameworkMap["enterprise_architecture"] || [];
+      const saGuidelines = frameworkMap["solution_architecture"] || [];
+      const archGuidelines = [...eaGuidelines, ...saGuidelines];
+      const specIntegrations = structured.integration_points || [];
+      enrichment.architecture_assessment = {
+        enterprise: {
+          active_guidelines: eaGuidelines.length,
+          principles: eaGuidelines.filter((g: any) => /principle|standard/i.test(g.type || "")).map((g: any) => g.name),
+          risk_categories: [...new Set(eaGuidelines.flatMap((g: any) => g.risk_categories))],
+          overdue_reviews: eaGuidelines.filter((g: any) => g.review_status === "overdue").length,
+          compliance_status: complianceAssessment.find(c => c.framework === "enterprise_architecture")?.status || "not_applicable",
+        },
+        solution: {
+          active_guidelines: saGuidelines.length,
+          patterns: saGuidelines.filter((g: any) => /pattern|blueprint|adr/i.test(g.type || "")).map((g: any) => g.name),
+          risk_categories: [...new Set(saGuidelines.flatMap((g: any) => g.risk_categories))],
+          overdue_reviews: saGuidelines.filter((g: any) => g.review_status === "overdue").length,
+          compliance_status: complianceAssessment.find(c => c.framework === "solution_architecture")?.status || "not_applicable",
+        },
+        total_arch_guidelines: archGuidelines.length,
+        critical_decisions: archGuidelines.filter((g: any) => g.severity === "critical").map((g: any) => g.name),
+        integration_points: specIntegrations,
+        estimated_complexity: structured.complexity || null,
+        weight_factor: 1 + (archGuidelines.filter((g: any) => g.severity === "critical").length * 0.12)
+          + (archGuidelines.filter((g: any) => g.severity === "high").length * 0.06),
+      };
+
+      // === DEVOPS READINESS ===
+      const devopsGuidelines = frameworkMap["devops"] || [];
+      enrichment.devops_readiness = {
+        active_guidelines: devopsGuidelines.length,
+        pipeline_standards: devopsGuidelines.filter((g: any) => /pipeline|ci.cd|gitops|deploy/i.test(g.type || g.name || "")).map((g: any) => g.name),
+        sre_practices: devopsGuidelines.filter((g: any) => /sre|slo|sli|observ|monitor|incident/i.test(g.type || g.name || "")).map((g: any) => g.name),
+        security_scanning: devopsGuidelines.filter((g: any) => /sast|dast|sbom|devsecops|scan/i.test(g.type || g.name || "")).map((g: any) => g.name),
+        risk_categories: [...new Set(devopsGuidelines.flatMap((g: any) => g.risk_categories))],
+        overdue_reviews: devopsGuidelines.filter((g: any) => g.review_status === "overdue").length,
+        compliance_status: complianceAssessment.find(c => c.framework === "devops")?.status || "not_applicable",
+        weight_factor: 1 + (devopsGuidelines.filter((g: any) => g.severity === "critical").length * 0.1)
+          + (devopsGuidelines.filter((g: any) => g.severity === "high").length * 0.05),
+      };
+
+      // === COMBINED TREND SIGNALS for Strategy Sculptor ===
+      enrichment.trend_signals = {
+        overall_risk_weight: Math.round(riskWeightModifier * 100) / 100,
+        domain_weights: {
+          security: enrichment.security_posture.weight_factor,
+          architecture: enrichment.architecture_assessment.weight_factor,
+          devops: enrichment.devops_readiness.weight_factor,
+          compliance: riskWeightModifier,
+        },
+        overdue_total: guidelines.filter((g: any) =>
+          g.last_reviewed_at
+            ? (Date.now() - new Date(g.last_reviewed_at).getTime() > (g.review_frequency_days || 365) * 86400000)
+            : true
+        ).length,
+        top_risks: [...new Set(guidelines
+          .filter((g: any) => g.severity === "critical" || g.severity === "high")
+          .flatMap((g: any) => g.risk_categories || [])
+        )],
+        recommendation: totalCritical > 2 ? "block_until_resolved"
+          : totalCritical > 0 ? "escalate_review"
+          : totalHigh > 3 ? "prioritize_remediation"
+          : "proceed_with_monitoring",
       };
     }
 
