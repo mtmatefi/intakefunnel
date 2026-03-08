@@ -24,6 +24,7 @@ import {
   ChevronDown,
   UserCog,
   X,
+  BarChart3,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
