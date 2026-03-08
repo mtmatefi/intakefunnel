@@ -82,6 +82,14 @@ function calculateSecurityRequirements(spec: any): number {
   };
   score += classificationScores[spec.dataClassification as DataClassification] || 0;
   if (spec.nfrs?.auditability) score += 15;
+  
+  // Factor in compliance assessment
+  const compliance = spec.complianceAssessment || [];
+  const criticalCompliance = compliance.filter((c: any) => c.applicable && (c.severity === 'critical' || c.severity === 'high'));
+  score += criticalCompliance.length * 10;
+  const nonCompliant = compliance.filter((c: any) => c.applicable && c.status === 'non_compliant');
+  score += nonCompliant.length * 15;
+  
   return Math.min(score, 100);
 }
 
