@@ -278,14 +278,46 @@ function StatsBar({ items }: { items: WorkItemTree[] }) {
 // ── Main export ──
 export function WorkItemDetailView({
   tree,
+  innovationId,
   innovationTitle,
   onClose,
 }: {
   tree: WorkItemTree[];
+  innovationId: string;
   innovationTitle: string;
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState<WorkItemTree | null>(null);
+  const translateMutation = useTranslateWorkItems();
+
+  const allItemIds = flattenTree(tree).map((i) => i.id);
+
+  const handleTranslateAll = async () => {
+    try {
+      const result = await translateMutation.mutateAsync({
+        workItemIds: allItemIds,
+        innovationId,
+        targetLanguage: "en",
+      });
+      toast.success(`${result.translated_count} Items ins Englische übersetzt`);
+    } catch (e: any) {
+      toast.error(e?.message || "Übersetzung fehlgeschlagen");
+    }
+  };
+
+  const handleTranslateOne = async (item: WorkItemTree) => {
+    const ids = [item.id, ...flattenTree(item.children).map((c) => c.id)];
+    try {
+      const result = await translateMutation.mutateAsync({
+        workItemIds: ids,
+        innovationId,
+        targetLanguage: "en",
+      });
+      toast.success(`${result.translated_count} Items übersetzt`);
+    } catch (e: any) {
+      toast.error(e?.message || "Übersetzung fehlgeschlagen");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -295,9 +327,21 @@ export function WorkItemDetailView({
           <GitBranch className="h-4 w-4 text-primary" />
           <h1 className="text-sm font-semibold">{innovationTitle} – Work Items</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5">
-          <X className="h-4 w-4" /> Schließen
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            disabled={translateMutation.isPending || allItemIds.length === 0}
+            onClick={handleTranslateAll}
+          >
+            {translateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
+            Alle übersetzen (EN)
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5">
+            <X className="h-4 w-4" /> Schließen
+          </Button>
+        </div>
       </div>
 
       <StatsBar items={tree} />
@@ -317,7 +361,15 @@ export function WorkItemDetailView({
 
         {/* Right: detail */}
         <div className="flex-1 min-w-0 bg-background">
-          {selected ? <DetailPanel item={selected} /> : <EmptyDetail />}
+          {selected ? (
+            <DetailPanel
+              item={selected}
+              onTranslate={() => handleTranslateOne(selected)}
+              isTranslating={translateMutation.isPending}
+            />
+          ) : (
+            <EmptyDetail />
+          )}
         </div>
       </div>
     </div>
