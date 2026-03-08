@@ -12,11 +12,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate tenant API key from header
+    // ── Auth: validate shared secret ──
     const tenantApiKey = req.headers.get("x-tenant-api-key");
-    if (!tenantApiKey || tenantApiKey.length < 16) {
+    const expectedSecret = Deno.env.get("CROSS_PROJECT_SYNC_SECRET");
+
+    if (!tenantApiKey || !expectedSecret || tenantApiKey !== expectedSecret) {
       return new Response(
-        JSON.stringify({ error: "Missing or invalid x-tenant-api-key header" }),
+        JSON.stringify({ error: "Unauthorized – invalid or missing x-tenant-api-key" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -32,31 +34,19 @@ Deno.serve(async (req) => {
       callback_url,
     } = body;
 
-    // Validate required fields
     if (!tenant_id || !initiative_id || !initiative_title) {
       return new Response(
-        JSON.stringify({
-          error: "Missing required fields: tenant_id, initiative_id, initiative_title",
-        }),
+        JSON.stringify({ error: "Missing required fields: tenant_id, initiative_id, initiative_title" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate tenant_api_key matches tenant_id pattern (simple hash check)
-    // In production, store tenant keys in a tenants table and validate against it
-    const expectedKeyPrefix = `tk_${tenant_id.substring(0, 8)}`;
-    if (!tenantApiKey.startsWith(expectedKeyPrefix)) {
-      return new Response(
-        JSON.stringify({ error: "Tenant API key does not match tenant_id" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Upsert the initiative link
+    // ── 1. Upsert initiative link ──
     const { data: link, error: linkError } = await supabase
       .from("initiative_intake_links")
       .upsert(
@@ -83,18 +73,42 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── 2. Also upsert into synced_innovations so Pipeline UI shows it ──
+    if (initiative_data) {
+      await supabase.from("synced_innovations").upsert(
+        {
+          external_id: initiative_id,
+          title: initiative_title,
+          description: initiative_data.description || initiative_data.value_proposition || null,
+          hypothesis: initiative_data.hypothesis || null,
+          expected_outcome: initiative_data.expected_outcome || null,
+          value_proposition: initiative_data.value_proposition || null,
+          effort_estimate: initiative_data.effort_estimate || null,
+          learnings: initiative_data.learnings || null,
+          responsible: initiative_data.responsible || null,
+          stage: initiative_data.stage || "implement",
+          status: initiative_data.status || "green",
+          target_date: initiative_data.target_date || null,
+          product_name: initiative_data.product_name || null,
+          impact_data: initiative_data.impact_links || initiative_data.impact_data || [],
+          trend_data: initiative_data.trend_links || initiative_data.trend_data || [],
+          risk_data: initiative_data.risk_links || initiative_data.risk_data || [],
+          source_app: "strategy_sculptor",
+          synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "external_id,source_app" }
+      );
+    }
+
     let intake = null;
 
-    // Optionally auto-create an intake from the initiative
+    // ── 3. Auto-create intake if requested ──
     if (create_intake && !link.intake_id) {
-      // We need a requester_id – use a system/service account or the first admin
       const requesterId = intake_defaults?.requester_id;
       if (!requesterId) {
         return new Response(
-          JSON.stringify({
-            error: "create_intake requires intake_defaults.requester_id",
-            link,
-          }),
+          JSON.stringify({ error: "create_intake requires intake_defaults.requester_id", link }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -105,7 +119,7 @@ Deno.serve(async (req) => {
           title: initiative_title,
           requester_id: requesterId,
           status: "draft",
-          category: intake_defaults?.category || "Strategy Initiative",
+          category: intake_defaults?.category || "Innovation Implementation",
           value_stream: intake_defaults?.value_stream || initiative_data?.value_stream || null,
           priority: intake_defaults?.priority || "medium",
         })
@@ -115,31 +129,75 @@ Deno.serve(async (req) => {
       if (intakeError) {
         console.error("Intake creation error:", intakeError);
         return new Response(
-          JSON.stringify({
-            error: "Initiative linked but intake creation failed",
-            details: intakeError.message,
-            link,
-          }),
+          JSON.stringify({ error: "Initiative linked but intake creation failed", details: intakeError.message, link }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       intake = newIntake;
 
-      // Link the new intake
+      // Update link with intake_id
       await supabase
         .from("initiative_intake_links")
         .update({ intake_id: newIntake.id, sync_status: "intake_created" })
         .eq("id", link.id);
 
-      // Create initial transcript from initiative data
-      if (initiative_data?.description) {
-        await supabase.from("transcripts").insert({
-          intake_id: newIntake.id,
-          speaker: "system",
-          message: `[Importiert aus Strategy Sculptor]\n\n**Initiative:** ${initiative_title}\n\n${initiative_data.description}`,
-          question_key: "imported_context",
+      // Create system transcript with all imported context
+      const contextParts: string[] = [
+        `[Importiert aus Strategy Sculptor]`,
+        `**Initiative:** ${initiative_title}`,
+      ];
+      if (initiative_data?.description) contextParts.push(`**Beschreibung:** ${initiative_data.description}`);
+      if (initiative_data?.value_proposition) contextParts.push(`**Value Proposition:** ${initiative_data.value_proposition}`);
+      if (initiative_data?.hypothesis) contextParts.push(`**Hypothese:** ${initiative_data.hypothesis}`);
+      if (initiative_data?.expected_outcome) contextParts.push(`**Erwartetes Ergebnis:** ${initiative_data.expected_outcome}`);
+      if (initiative_data?.effort_estimate) contextParts.push(`**Aufwand:** ${initiative_data.effort_estimate}`);
+
+      await supabase.from("transcripts").insert({
+        intake_id: newIntake.id,
+        speaker: "system",
+        message: contextParts.join("\n\n"),
+        question_key: "imported_context",
+      });
+    }
+
+    // ── 4. Enrichment callback ──
+    let callbackResult = null;
+    if (callback_url && (intake || link.intake_id)) {
+      const intakeId = intake?.id || link.intake_id;
+      const enrichmentPayload = {
+        initiative_id,
+        tenant_id,
+        intake_id: intakeId,
+        intake_status: intake ? "draft" : "linked",
+        intake_title: intake?.title || initiative_title,
+        intake_url: `${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", ".lovable.app")}/intake/${intakeId}`,
+        enrichment: {
+          received_at: new Date().toISOString(),
+          fields_captured: Object.keys(initiative_data || {}),
+          intake_created: !!intake,
+        },
+      };
+
+      try {
+        const cbResp = await fetch(callback_url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-api-key": expectedSecret,
+          },
+          body: JSON.stringify(enrichmentPayload),
         });
+        callbackResult = { status: cbResp.status, ok: cbResp.ok };
+
+        // Mark enrichment sent
+        await supabase
+          .from("initiative_intake_links")
+          .update({ enrichment_sent_at: new Date().toISOString() })
+          .eq("id", link.id);
+      } catch (cbErr) {
+        console.error("Callback error:", cbErr);
+        callbackResult = { status: 0, ok: false, error: cbErr instanceof Error ? cbErr.message : "unknown" };
       }
     }
 
@@ -148,6 +206,7 @@ Deno.serve(async (req) => {
         success: true,
         link,
         intake,
+        callback: callbackResult,
         message: intake
           ? `Initiative linked and intake created: ${intake.id}`
           : `Initiative linked successfully`,
