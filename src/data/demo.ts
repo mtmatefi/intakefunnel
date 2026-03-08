@@ -298,6 +298,7 @@ export const categoryLabels: Record<string, string> = {
   integrations: 'Integrationen',
   ux: 'Benutzeroberfläche',
   nfr: 'Anforderungen',
+  compliance: 'Compliance & Governance',
 };
 
 export const interviewQuestions: InterviewQuestion[] = [
