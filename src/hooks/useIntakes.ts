@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import type { Tables } from '@/integrations/supabase/types';
 
 export type Intake = Tables<'intakes'>;
@@ -11,19 +12,25 @@ export type JiraExport = Tables<'jira_exports'>;
 
 export function useIntakes() {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
 
   return useQuery({
-    queryKey: ['intakes', user?.id],
+    queryKey: ['intakes', user?.id, workspace?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('intakes')
         .select('*')
         .order('updated_at', { ascending: false });
 
+      if (workspace) {
+        query = query.eq('workspace_id', workspace.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Intake[];
     },
-    enabled: !!user,
+    enabled: !!user && !!workspace,
   });
 }
 
@@ -132,6 +139,7 @@ export function useJiraExport(intakeId: string | undefined) {
 export function useCreateIntake() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
 
   return useMutation({
     mutationFn: async ({ title, valueStream, category }: { 
@@ -140,12 +148,14 @@ export function useCreateIntake() {
       category?: string;
     }) => {
       if (!user) throw new Error('User must be logged in');
+      if (!workspace) throw new Error('No workspace selected');
       
       const { data, error } = await supabase
         .from('intakes')
         .insert({
           title,
           requester_id: user.id,
+          workspace_id: workspace.id,
           value_stream: valueStream || null,
           category: category || null,
           status: 'gathering_info',

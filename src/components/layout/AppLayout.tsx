@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,6 +32,9 @@ import {
   Bell,
   Globe,
   Wrench,
+  Building2,
+  ChevronsUpDown,
+  Plus,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
@@ -110,6 +114,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, isImpersonating, switchRole, stopImpersonating, logout } = useAuth();
+  const { workspace, workspaces, setWorkspace } = useWorkspace();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -139,6 +144,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </span>
         )}
       </div>
+
+      {/* Workspace Switcher */}
+      {!sidebarCollapsed && workspaces.length > 0 && (
+        <div className="px-3 py-2 border-b border-border/50">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-sm text-foreground hover:bg-secondary/40 transition-colors">
+                <Building2 className="h-4 w-4 text-primary shrink-0" />
+                <span className="truncate flex-1 text-left">{workspace?.name || "Workspace"}</span>
+                <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Workspace wechseln</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {workspaces.map((ws) => (
+                <DropdownMenuItem
+                  key={ws.id}
+                  onClick={() => setWorkspace(ws)}
+                  className={cn(workspace?.id === ws.id && "bg-secondary")}
+                >
+                  {ws.name}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/workspace")}>
+                <Plus className="mr-2 h-4 w-4" /> Neuer Workspace
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {/* Nav sections */}
       <nav className="flex-1 overflow-y-auto pt-2 pb-4">

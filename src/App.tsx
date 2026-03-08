@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
+import { WorkspaceProvider, useWorkspace } from "./contexts/WorkspaceContext";
 import { TutorialOverlay } from "./components/tutorial/TutorialOverlay";
 import { useTutorial } from "./hooks/useTutorial";
 import { Loader2 } from "lucide-react";
@@ -24,6 +25,7 @@ import ProfilePage from "./pages/Profile";
 import SettingsPage from "./pages/Settings";
 import TutorialsPage from "./pages/Tutorials";
 import NotFound from "./pages/NotFound";
+import WorkspaceSelect from "./pages/WorkspaceSelect";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,16 @@ function LoadingScreen() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const { workspace, loading: wsLoading } = useWorkspace();
+  if (isLoading || wsLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // If no workspace selected, redirect to workspace selector
+  if (!workspace) return <Navigate to="/workspace" replace />;
+  return <>{children}</>;
+}
+
+function WorkspaceRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -64,6 +76,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} />
+        <Route path="/workspace" element={<WorkspaceRoute><WorkspaceSelect /></WorkspaceRoute>} />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/intake/new" element={<ProtectedRoute><NewIntakePage /></ProtectedRoute>} />
@@ -89,6 +102,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <AuthProvider>
+        <WorkspaceProvider>
         <TutorialProvider>
           <TooltipProvider>
             <Toaster />
@@ -98,6 +112,7 @@ const App = () => (
             </BrowserRouter>
           </TooltipProvider>
         </TutorialProvider>
+        </WorkspaceProvider>
       </AuthProvider>
     </LanguageProvider>
   </QueryClientProvider>
