@@ -501,6 +501,18 @@ export default function IntakeDetailPage() {
             )}
           </TabsContent>
 
+          {/* Chat Tab */}
+          <TabsContent value="chat">
+            {id && user && (
+              <IntakeChat
+                intakeId={id}
+                intakeTitle={intake.title}
+                userId={user.id}
+                userRole={user.role}
+              />
+            )}
+          </TabsContent>
+
           {/* Transcript Tab */}
           <TabsContent value="transcript">
             <Card>
