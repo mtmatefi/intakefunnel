@@ -237,19 +237,19 @@ export default function DashboardPage() {
                           </TableCell>
                           <TableCell>
                             {intake.priority && (
-                              <span className={cn('px-2 py-1 text-xs font-medium capitalize rounded', priorityColors[intake.priority as keyof typeof priorityColors])}>
+                              <span className={cn('hidden sm:inline-block px-2 py-1 text-xs font-medium capitalize rounded', priorityColors[intake.priority as keyof typeof priorityColors])}>
                                 {intake.priority}
                               </span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {score ? (
                               <span className="text-sm font-bold">{Number(score.wsjf_score).toFixed(1)}</span>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                             {new Date(intake.updated_at).toLocaleDateString('de-DE')}
                           </TableCell>
                           <TableCell>
