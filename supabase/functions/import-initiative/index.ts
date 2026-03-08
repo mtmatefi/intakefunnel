@@ -105,12 +105,30 @@ Deno.serve(async (req) => {
 
     // ── 3. Auto-create intake if requested ──
     if (create_intake && !link.intake_id) {
-      const requesterId = intake_defaults?.requester_id;
+      // Use provided requester_id, or fall back to a tenant service user
+      let requesterId = intake_defaults?.requester_id;
+
       if (!requesterId) {
-        return new Response(
-          JSON.stringify({ error: "create_intake requires intake_defaults.requester_id", link }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // Look up or use a well-known service user for cross-project sync
+        const SERVICE_USER_ID = "00000000-0000-0000-0000-000000000000";
+        
+        // Check if a profile exists for this service user, create one if not
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("user_id", SERVICE_USER_ID)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          await supabase.from("profiles").upsert({
+            user_id: SERVICE_USER_ID,
+            display_name: "Sync Service",
+            email: "sync-service@system.internal",
+          }, { onConflict: "user_id" });
+        }
+
+        requesterId = SERVICE_USER_ID;
+        console.log("No requester_id provided – using tenant service user:", requesterId);
       }
 
       const { data: newIntake, error: intakeError } = await supabase
