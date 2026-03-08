@@ -214,7 +214,9 @@ export type Database = {
       }
       initiative_intake_links: {
         Row: {
+          callback_url: string | null
           created_at: string
+          enrichment_sent_at: string | null
           id: string
           initiative_data: Json | null
           initiative_id: string
@@ -227,7 +229,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          callback_url?: string | null
           created_at?: string
+          enrichment_sent_at?: string | null
           id?: string
           initiative_data?: Json | null
           initiative_id: string
@@ -240,7 +244,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          callback_url?: string | null
           created_at?: string
+          enrichment_sent_at?: string | null
           id?: string
           initiative_data?: Json | null
           initiative_id?: string
