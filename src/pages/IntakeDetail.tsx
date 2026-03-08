@@ -220,6 +220,9 @@ export default function IntakeDetailPage() {
           <JiraSyncPanel intakeId={id} jpdIssueKey={intake.jpd_issue_key} autoRefreshInterval={30000} />
         )}
 
+        {/* Initiative Links from Strategy Sculptor */}
+        {id && <InitiativeLinkCard intakeId={id} />}
+
         {/* Impact Score */}
         {id && <ImpactScoreCard intakeId={id} />}
 
