@@ -328,6 +328,21 @@ export function WorkItemDetailView({
     }
   };
 
+  const handlePublish = async () => {
+    try {
+      const result = await publishMutation.mutateAsync({ innovationId });
+      if (result.success) {
+        toast.success(result.sent
+          ? "Delivery Package an Strategy Sculptor gesendet"
+          : "Delivery Package erstellt (Sculptor nicht konfiguriert)");
+      } else {
+        toast.error("Sculptor hat das Package abgelehnt");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Publish fehlgeschlagen");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Top bar */}
@@ -338,6 +353,15 @@ export function WorkItemDetailView({
         </div>
         <div className="flex items-center gap-2">
           <Button
+            size="sm"
+            className="gap-1.5 text-xs"
+            disabled={publishMutation.isPending || allItemIds.length === 0}
+            onClick={handlePublish}
+          >
+            {publishMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Delivery Package publizieren
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs"
@@ -345,7 +369,7 @@ export function WorkItemDetailView({
             onClick={handleTranslateAll}
           >
             {translateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
-            Alle übersetzen (EN)
+            Übersetzen (EN)
           </Button>
           <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5">
             <X className="h-4 w-4" /> Schließen
