@@ -293,14 +293,29 @@ function InnovationDetailSheet({
             </h4>
             {feedback.length > 0 && (
               <div className="space-y-2 mb-3">
-                {feedback.map((fb) => (
-                  <div key={fb.id} className="p-3 rounded-lg bg-secondary/50 text-sm">
-                    <p>{fb.comment}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(fb.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                ))}
+                {feedback.map((fb: any) => {
+                  const isExternal = fb.source_app && fb.source_app !== 'intake_funnel';
+                  return (
+                    <div key={fb.id} className={cn(
+                      "p-3 rounded-lg text-sm",
+                      isExternal ? "bg-primary/5 border border-primary/20" : "bg-secondary/50"
+                    )}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                          <User className="h-3 w-3" />
+                          {fb.author_display_name || fb.author_name || 'Unbekannt'}
+                        </span>
+                        {isExternal && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1.5">Sculptor</Badge>
+                        )}
+                      </div>
+                      <p>{fb.comment}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(fb.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             )}
             <div className="flex gap-2">
