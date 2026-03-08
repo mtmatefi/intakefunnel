@@ -216,10 +216,39 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
 
   // Check for saved state on mount
   useEffect(() => {
-    if (!hasRestoredRef.current && hasSavedState()) {
+    if (!innovationContext && !hasRestoredRef.current && hasSavedState()) {
       setShowRestoreDialog(true);
     }
   }, [hasSavedState]);
+
+  // Show innovation prefill summary on mount
+  useEffect(() => {
+    if (innovationContext && !innovationPrefillShown) {
+      setInnovationPrefillShown(true);
+      const prefilledKeys = Object.keys(prefilledAnswers);
+      const allKeys = interviewQuestions.map(q => q.key);
+      const remainingKeys = allKeys.filter(k => !prefilledKeys.includes(k));
+      
+      let summaryMsg = `🚀 **Innovation-Daten übernommen: "${innovationContext.title}"**\n\n`;
+      summaryMsg += `✅ **${prefilledKeys.length} Fragen** wurden automatisch aus der Innovation beantwortet:\n`;
+      for (const key of prefilledKeys) {
+        const q = interviewQuestions.find(iq => iq.key === key);
+        if (q) summaryMsg += `- ${q.question.substring(0, 60)}...\n`;
+      }
+      summaryMsg += `\n📋 **${remainingKeys.length} offene Fragen** verbleiben. Lass uns diese durchgehen!`;
+
+      setTranscript([{
+        id: `msg-innovation-prefill`,
+        intakeId: 'new',
+        speaker: 'assistant',
+        message: summaryMsg,
+        timestamp: new Date().toISOString(),
+      }]);
+
+      // Skip to first unanswered question
+      skipToFirstUnanswered();
+    }
+  }, [innovationContext, innovationPrefillShown]);
 
   // Auto-save after each change
   useEffect(() => {
