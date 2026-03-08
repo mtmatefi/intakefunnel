@@ -324,7 +324,32 @@ export function IntakeWizard() {
       setEnrichedAnswers(prev => ({ ...prev, [currentQuestion.key]: validation.enrichedAnswer! }));
     }
 
-    // Show quality feedback if available
+    // Update classification from AI
+    if (validation) {
+      if (validation.classifiedType && !userClassificationOverride) {
+        setClassification(validation.classifiedType);
+        setClassificationConfidence(validation.classificationConfidence);
+        setClassificationReason(validation.classificationReason);
+      }
+
+      // Update matched initiatives
+      if (validation.matchedInitiatives?.length > 0) {
+        setMatchedInitiatives(prev => {
+          const existingIds = prev.map(m => m.initiative_id);
+          const newMatches = validation.matchedInitiatives.filter(
+            (m: MatchedInitiative) => !existingIds.includes(m.initiative_id)
+          );
+          return [...prev, ...newMatches];
+        });
+      }
+
+      // Queue adaptive questions
+      if (validation.adaptiveQuestions?.length > 0) {
+        setPendingAdaptiveQuestions(prev => [...prev, ...validation.adaptiveQuestions]);
+      }
+    }
+
+    // Show quality feedback + classification + matches
     if (validation) {
       const qualityEmoji = {
         excellent: '✨',
@@ -334,9 +359,32 @@ export function IntakeWizard() {
       }[validation.quality];
       
       const qualityMessage = t(`quality.${validation.quality}`);
-      const feedbackMessage = `${qualityEmoji} ${qualityMessage}`;
+      let feedbackMessage = `${qualityEmoji} ${qualityMessage}`;
 
-      // Add quality feedback
+      // Add classification info
+      if (validation.classifiedType) {
+        const typeLabels: Record<string, string> = {
+          initiative: '🎯 Initiative',
+          value_stream_epic: '📊 Value Stream Epic',
+          epic: '📦 Epic',
+          feature: '⚡ Feature',
+        };
+        const confLabel = validation.classificationConfidence === 'high' ? '✅' : validation.classificationConfidence === 'medium' ? '🔶' : '🔸';
+        feedbackMessage += `\n\n${language === 'de' ? 'Klassifizierung' : 'Classification'}: ${typeLabels[validation.classifiedType]} ${confLabel}`;
+        if (validation.classificationReason) {
+          feedbackMessage += `\n_${validation.classificationReason}_`;
+        }
+      }
+
+      // Add initiative match info
+      if (validation.matchedInitiatives?.length > 0) {
+        feedbackMessage += `\n\n🔗 ${language === 'de' ? 'Mögliche Verknüpfung gefunden' : 'Possible link found'}:`;
+        for (const match of validation.matchedInitiatives) {
+          const scoreEmoji = match.match_score === 'high' ? '🟢' : match.match_score === 'medium' ? '🟡' : '🟠';
+          feedbackMessage += `\n${scoreEmoji} **${match.initiative_title}** – ${match.match_reason}`;
+        }
+      }
+
       setTranscript(prev => [...prev, {
         id: `msg-${Date.now()}-feedback`,
         intakeId: 'new',
@@ -344,6 +392,26 @@ export function IntakeWizard() {
         message: feedbackMessage,
         timestamp: new Date().toISOString(),
       }]);
+    }
+
+    // Check if there are adaptive questions to inject before moving on
+    if (pendingAdaptiveQuestions.length > 0) {
+      const adaptiveQ = pendingAdaptiveQuestions[0];
+      setPendingAdaptiveQuestions(prev => prev.slice(1));
+      setPendingFollowUp(adaptiveQ.question);
+      setIsProcessing(false);
+
+      const adaptiveMsg = `🔍 ${adaptiveQ.question}\n\n_${language === 'de' ? 'Hintergrund' : 'Context'}: ${adaptiveQ.reason}_`;
+      setTranscript(prev => [...prev, {
+        id: `msg-${Date.now()}-adaptive`,
+        intakeId: 'new',
+        speaker: 'assistant',
+        message: adaptiveMsg,
+        timestamp: new Date().toISOString(),
+      }]);
+
+      setAnswers(prev => ({ ...prev, [currentQuestion.key]: combinedAnswer }));
+      return;
     }
 
     setIsProcessing(false);
