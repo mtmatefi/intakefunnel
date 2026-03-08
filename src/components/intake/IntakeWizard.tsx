@@ -567,7 +567,17 @@ export function IntakeWizard() {
 
       console.log('Saved transcript:', transcriptMessages.length, 'messages');
 
-      // Step 3: Generate specification with AI
+      // Step 2.5: Link confirmed initiatives
+      if (confirmedInitiatives.length > 0) {
+        toast.loading(language === 'de' ? 'Verknüpfe Initiativen...' : 'Linking initiatives...', { id: 'gen-spec' });
+        for (const initiative of confirmedInitiatives) {
+          await supabase
+            .from('initiative_intake_links')
+            .update({ intake_id: intake.id, sync_status: 'linked' })
+            .eq('initiative_id', initiative.initiative_id);
+        }
+        console.log('Linked', confirmedInitiatives.length, 'initiatives');
+      }
       toast.loading(language === 'de' ? 'Generiere Spezifikation mit KI...' : 'Generating specification with AI...', { id: 'gen-spec' });
       
       await generateSpec.mutateAsync(intake.id);
