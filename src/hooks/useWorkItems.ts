@@ -9,6 +9,12 @@ export interface WorkItem {
   item_type: 'epic' | 'feature' | 'story';
   title: string;
   description: string | null;
+  acceptance_criteria: string[] | null;
+  functional_requirements: string[] | null;
+  non_functional_requirements: string[] | null;
+  priority: string | null;
+  story_points: number | null;
+  definition_of_done: string | null;
   status: string;
   assignee: string | null;
   jira_issue_key: string | null;
