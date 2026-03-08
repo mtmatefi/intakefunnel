@@ -31,6 +31,22 @@ serve(async (req) => {
 
     console.log(`Validating answer for question: ${questionKey} in language: ${language}`);
 
+    // Fetch active guidelines for compliance-aware validation
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: guidelines } = await supabase
+      .from('guidelines')
+      .select('name, compliance_framework, severity, risk_categories')
+      .eq('is_active', true);
+
+    const guidelinesContext = guidelines && guidelines.length > 0
+      ? `\n\nAKTIVE COMPLIANCE-GUIDELINES im Unternehmen:\n${guidelines.map((g: any) =>
+          `- [${g.compliance_framework?.toUpperCase()}] ${g.name} (${g.severity}) – Risiken: ${(g.risk_categories || []).join(', ')}`
+        ).join('\n')}\n\nWenn die Antwort des Benutzers Compliance-relevante Aspekte berührt (Daten, Security, Architektur, Export, Regulierung), prüfe gegen diese Guidelines und stelle bei Bedarf Nachfragen zu fehlenden Compliance-Informationen.`
+      : '';
+
     const systemPromptDE = `Du bist ein erfahrener Solution Architect und Business Analyst, der Software-Anforderungen sammelt. 
 Deine Aufgabe ist es, Benutzerantworten zu validieren und bei Bedarf Nachfragen zu stellen.
 WICHTIG: Antworte IMMER auf Deutsch!
