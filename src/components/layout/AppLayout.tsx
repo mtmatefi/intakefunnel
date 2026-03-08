@@ -42,6 +42,7 @@ const navigation = [
   { name: "Audit Log", href: "/audit", icon: FileText, roles: ["admin"] },
   { name: "Policies", href: "/admin/policies", icon: Shield, roles: ["admin"] },
   { name: "Integrations", href: "/admin/integrations", icon: Settings, roles: ["admin"] },
+  { name: "Benutzer", href: "/admin/users", icon: UserCog, roles: ["admin"] },
 ];
 
 const roleLabels: Record<UserRole, string> = {
