@@ -54,7 +54,7 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 // ── Innovation Card ──
-function InnovationCard({ innovation, onClick, unreadCount }: { innovation: SyncedInnovation; onClick: () => void; unreadCount: number }) {
+function InnovationCard({ innovation, onClick, unreadCount, isNew }: { innovation: SyncedInnovation; onClick: () => void; unreadCount: number; isNew: boolean }) {
   const daysAge = Math.floor((Date.now() - new Date(innovation.updated_at).getTime()) / 86_400_000);
   const isImplement = innovation.stage === "implement";
 
@@ -66,6 +66,11 @@ function InnovationCard({ innovation, onClick, unreadCount }: { innovation: Sync
         isImplement ? "border-emerald-500/30 hover:border-emerald-500/50" : "border-border/50 hover:border-primary/30"
       )}
     >
+      {isNew && (
+        <span className="absolute -top-1.5 -left-1.5 flex h-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[8px] font-bold px-1.5 z-10">
+          NEU
+        </span>
+      )}
       {unreadCount > 0 && (
         <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1 z-10">
           {unreadCount}
@@ -354,7 +359,7 @@ export default function InnovationsPage() {
   const { workspace } = useWorkspace();
   const { data: innovations = [], isLoading, refetch } = useInnovations(workspace?.id);
   const fetchFromSculptor = useFetchInnovationsFromSculptor();
-  const { getUnreadForInnovation, markAsRead } = useUnreadFeedback();
+  const { getUnreadForInnovation, isNewInnovation, markAsRead } = useUnreadFeedback();
   const [selectedInnovation, setSelectedInnovation] = useState<SyncedInnovation | null>(null);
   const [filterStage, setFilterStage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -538,7 +543,7 @@ export default function InnovationsPage() {
                     </div>
                   ) : (
                     (byStage[stage] ?? []).map((inn) => (
-                      <InnovationCard key={inn.id} innovation={inn} onClick={() => setSelectedInnovation(inn)} unreadCount={getUnreadForInnovation(inn.id)} />
+                      <InnovationCard key={inn.id} innovation={inn} onClick={() => setSelectedInnovation(inn)} unreadCount={getUnreadForInnovation(inn.id)} isNew={isNewInnovation(inn.id)} />
                     ))
                   )}
                 </div>
