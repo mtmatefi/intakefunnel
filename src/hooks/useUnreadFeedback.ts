@@ -102,6 +102,7 @@ export function useUnreadFeedback() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unread-feedback'] });
+      queryClient.invalidateQueries({ queryKey: ['new-innovations'] });
     },
   });
 
