@@ -222,7 +222,7 @@ export default function PoliciesPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
               {filtered.map((g) => (
                 <GuidelineCard
                   key={g.id}

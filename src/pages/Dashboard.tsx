@@ -277,7 +277,7 @@ export default function DashboardPage() {
             <CardDescription>So werden Intakes basierend auf Komplexität und Anforderungen geroutet</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {Object.entries(deliveryPathInfo).map(([key, info]) => (
                 <div key={key} className="flex items-start gap-2 p-2 border border-border rounded">
                   <div className="w-3 h-3 mt-1 flex-shrink-0 rounded-full" style={{ backgroundColor: `hsl(var(--${info.color}))` }} />

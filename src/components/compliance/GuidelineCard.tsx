@@ -102,22 +102,22 @@ export function GuidelineCard({ guideline, onEdit, onChatEdit, onShowHistory, on
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-muted/30 to-transparent" />
         </div>
 
-        <div className="flex justify-end gap-2 mt-3">
+        <div className="flex flex-wrap justify-end gap-1 sm:gap-2 mt-3">
           {onShowHistory && (
-            <Button variant="ghost" size="sm" onClick={() => onShowHistory(guideline)}>
-              <History className="h-3.5 w-3.5 mr-1" /> Historie
+            <Button variant="ghost" size="sm" className="h-8 text-xs sm:text-sm" onClick={() => onShowHistory(guideline)}>
+              <History className="h-3.5 w-3.5 mr-1" /> <span className="hidden sm:inline">Historie</span>
             </Button>
           )}
           {onChatEdit && (
-            <Button variant="ghost" size="sm" onClick={() => onChatEdit(guideline)}>
-              <MessageSquare className="h-3.5 w-3.5 mr-1" /> Chat-Edit
+            <Button variant="ghost" size="sm" className="h-8 text-xs sm:text-sm" onClick={() => onChatEdit(guideline)}>
+              <MessageSquare className="h-3.5 w-3.5 mr-1" /> <span className="hidden sm:inline">Chat-Edit</span>
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => onEdit(guideline)}>
-            <Pencil className="h-3.5 w-3.5 mr-1" /> Bearbeiten
+          <Button variant="ghost" size="sm" className="h-8 text-xs sm:text-sm" onClick={() => onEdit(guideline)}>
+            <Pencil className="h-3.5 w-3.5 mr-1" /> <span className="hidden sm:inline">Bearbeiten</span>
           </Button>
-          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onDelete(guideline.id)}>
-            <Trash2 className="h-3.5 w-3.5 mr-1" /> Löschen
+          <Button variant="ghost" size="sm" className="h-8 text-xs sm:text-sm text-destructive hover:text-destructive" onClick={() => onDelete(guideline.id)}>
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> <span className="hidden sm:inline">Löschen</span>
           </Button>
         </div>
       </CardContent>
