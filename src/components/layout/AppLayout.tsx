@@ -264,10 +264,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <div className="flex items-center gap-2.5 text-sm">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium text-foreground">Intake Funnel</span>
-              </div>
+              {workspace && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
+                      <Building2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">{workspace.name}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-card border-border">
+                    {workspaces.map((ws) => (
+                      <DropdownMenuItem
+                        key={ws.id}
+                        onClick={() => setWorkspace(ws)}
+                        className={cn(ws.id === workspace.id && "text-primary")}
+                      >
+                        {ws.name}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/workspace")}>
+                      Workspace verwalten
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             {/* Right */}
