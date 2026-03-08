@@ -19,6 +19,7 @@ import {
   PlusCircle,
   ClipboardCheck,
   Settings,
+  FileText,
   Shield,
   LogOut,
   User,
