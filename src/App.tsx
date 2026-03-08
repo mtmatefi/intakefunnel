@@ -19,6 +19,7 @@ import InterviewConfigPage from "./pages/admin/InterviewConfig";
 import UserManagementPage from "./pages/admin/UserManagement";
 import ProfilePage from "./pages/Profile";
 import SettingsPage from "./pages/Settings";
+import TutorialsPage from "./pages/Tutorials";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
