@@ -24,6 +24,7 @@ import {
   Clock,
   User,
   ArrowRight,
+  RefreshCw,
 } from "lucide-react";
 import type { SyncedInnovation } from "@/hooks/useInnovations";
 
