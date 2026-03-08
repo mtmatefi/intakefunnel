@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.sync-innovations]
 verify_jwt = false
+
+[functions.fetch-innovations]
+verify_jwt = false
