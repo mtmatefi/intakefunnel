@@ -7,46 +7,43 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  Lightbulb, FlaskConical, Rocket, CheckCircle2, XCircle,
+  Lightbulb, FlaskConical, Rocket, CheckCircle2,
   TrendingUp, ShieldAlert, Target, MessageSquarePlus, PlusCircle,
   Clock, User, ArrowRight, RefreshCw, Search, LayoutGrid, List,
 } from "lucide-react";
 import type { SyncedInnovation } from "@/hooks/useInnovations";
 
-// ── Stage pipeline (matches Sculptor's structure) ──
-const STAGES = ["ideation", "validation", "pilot", "scaling", "completed"] as const;
+// ── Stage pipeline (matches Strategy Sculptor's innovation_stage enum exactly) ──
+const STAGES = ["discover", "explore", "prototype", "validate", "implement"] as const;
 
 const STAGE_ICONS: Record<string, string> = {
-  ideation: "🔍", validation: "🧪", pilot: "🛠️", scaling: "✅", completed: "🚀", archived: "📦",
+  discover: "🔍", explore: "🧭", prototype: "🛠️", validate: "🧪", implement: "🚀",
 };
 
 const STAGE_LABELS: Record<string, string> = {
-  ideation: "Ideation", validation: "Validierung", pilot: "Pilot",
-  scaling: "Skalierung", completed: "Abgeschlossen", archived: "Archiviert",
+  discover: "Entdecken", explore: "Erforschen", prototype: "Prototyp",
+  validate: "Validieren", implement: "Umsetzen",
 };
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
-  ideation: "Ideen sammeln & bewerten",
-  validation: "Hypothese prüfen & validieren",
-  pilot: "Erste Umsetzung testen",
-  scaling: "Rollout & Wachstum",
-  completed: "Erfolgreich umgesetzt",
+  discover: "Ideen & Probleme entdecken",
+  explore: "Lösungsräume erforschen",
+  prototype: "Erste Prototypen bauen",
+  validate: "Hypothesen validieren",
+  implement: "In Produkt umsetzen",
 };
 
 const STAGE_COLORS: Record<string, string> = {
-  ideation: "bg-primary/20 text-primary",
-  validation: "bg-accent/20 text-accent-foreground",
-  pilot: "bg-warning/20 text-warning",
-  scaling: "bg-secondary/20 text-secondary-foreground",
-  completed: "bg-muted text-muted-foreground",
-  archived: "bg-muted text-muted-foreground",
+  discover: "bg-purple-500/20 text-purple-400",
+  explore: "bg-cyan-500/20 text-cyan-400",
+  prototype: "bg-amber-500/20 text-amber-400",
+  validate: "bg-blue-500/20 text-blue-400",
+  implement: "bg-emerald-500/20 text-emerald-400",
 };
 
 const STATUS_DOT: Record<string, string> = {
@@ -55,14 +52,18 @@ const STATUS_DOT: Record<string, string> = {
   red: "bg-red-500",
 };
 
-// ── Innovation Card (compact, matching Sculptor) ──
+// ── Innovation Card ──
 function InnovationCard({ innovation, onClick }: { innovation: SyncedInnovation; onClick: () => void }) {
   const daysAge = Math.floor((Date.now() - new Date(innovation.updated_at).getTime()) / 86_400_000);
+  const isImplement = innovation.stage === "implement";
 
   return (
     <div
       onClick={onClick}
-      className="group rounded-lg border border-border/50 bg-card/40 hover:bg-card/70 p-2.5 cursor-pointer transition-all hover:border-primary/30"
+      className={cn(
+        "group rounded-lg border bg-card/40 hover:bg-card/70 p-2.5 cursor-pointer transition-all",
+        isImplement ? "border-emerald-500/30 hover:border-emerald-500/50" : "border-border/50 hover:border-primary/30"
+      )}
     >
       <div className="flex items-center gap-2">
         <div className={cn("h-2 w-2 rounded-full shrink-0", STATUS_DOT[innovation.status ?? "yellow"] || "bg-muted")} />
@@ -74,7 +75,14 @@ function InnovationCard({ innovation, onClick }: { innovation: SyncedInnovation;
         ) : (
           <span className="text-[10px] text-muted-foreground/40 italic">Kein Owner</span>
         )}
-        <span className="text-[9px] text-muted-foreground/60 shrink-0">{daysAge}d</span>
+        <div className="flex items-center gap-1.5">
+          {isImplement && (
+            <Badge variant="outline" className="text-[8px] h-3.5 border-emerald-500/30 text-emerald-400 px-1">
+              Intake bereit
+            </Badge>
+          )}
+          <span className="text-[9px] text-muted-foreground/60 shrink-0">{daysAge}d</span>
+        </div>
       </div>
     </div>
   );
@@ -96,6 +104,8 @@ function InnovationDetailSheet({
   const [comment, setComment] = useState("");
 
   if (!innovation) return null;
+
+  const isImplement = innovation.stage === "implement";
 
   const handleAddFeedback = async () => {
     if (!comment.trim()) return;
@@ -248,11 +258,23 @@ function InnovationDetailSheet({
 
           <Separator />
 
-          <Button onClick={handleCreateIntake} className="w-full gap-2">
-            <PlusCircle className="h-4 w-4" />
-            Intake aus dieser Innovation erstellen
-            <ArrowRight className="h-4 w-4 ml-auto" />
-          </Button>
+          {/* Intake Button – only for implement stage */}
+          {isImplement ? (
+            <Button onClick={handleCreateIntake} className="w-full gap-2">
+              <PlusCircle className="h-4 w-4" />
+              Intake aus dieser Innovation erstellen
+              <ArrowRight className="h-4 w-4 ml-auto" />
+            </Button>
+          ) : (
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                Intake-Erstellung verfügbar ab Stage <span className="font-medium text-emerald-400">"Umsetzen"</span>
+              </p>
+              <p className="text-xs text-muted-foreground/60 mt-1">
+                Aktuell: {STAGE_ICONS[innovation.stage]} {STAGE_LABELS[innovation.stage] || innovation.stage}
+              </p>
+            </div>
+          )}
 
           <Separator />
 
@@ -297,7 +319,7 @@ export default function InnovationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
 
-  // Auto-fetch from Sculptor on page load
+  // Auto-fetch from Sculptor on page load (graceful – won't error if endpoint missing)
   useEffect(() => {
     if (workspace?.id && (workspace as any).external_workspace_id) {
       fetchFromSculptor.mutate(workspace.id, { onSuccess: () => refetch() });
@@ -327,6 +349,8 @@ export default function InnovationsPage() {
     return map;
   }, [innovations]);
 
+  const implementCount = stageCounts["implement"] ?? 0;
+
   return (
     <AppLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-4 animate-fade-in">
@@ -338,7 +362,12 @@ export default function InnovationsPage() {
               Innovation Pipeline
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Aus dem Strategy Sculptor – {innovations.length} Innovation{innovations.length !== 1 ? "en" : ""} in der Pipeline (read-only)
+              Aus dem Strategy Sculptor – {innovations.length} Innovation{innovations.length !== 1 ? "en" : ""} in der Pipeline
+              {implementCount > 0 && (
+                <span className="ml-2 text-emerald-400 font-medium">
+                  · {implementCount} bereit für Intake
+                </span>
+              )}
             </p>
           </div>
           <Button
@@ -363,6 +392,7 @@ export default function InnovationsPage() {
             {STAGES.map((stage, idx) => {
               const count = stageCounts[stage] ?? 0;
               const isActive = filterStage === stage;
+              const isImplementStage = stage === "implement";
               return (
                 <button
                   key={stage}
@@ -371,11 +401,13 @@ export default function InnovationsPage() {
                     "relative flex flex-col items-center gap-1 rounded-lg py-3 px-2 transition-all text-center",
                     isActive
                       ? "bg-primary/15 border border-primary/40 shadow-sm"
+                      : isImplementStage && count > 0
+                      ? "bg-emerald-500/5 border border-emerald-500/30 hover:bg-emerald-500/10"
                       : "bg-card/40 border border-border/40 hover:bg-card/60 hover:border-border/60"
                   )}
                 >
                   <span className="text-lg">{STAGE_ICONS[stage]}</span>
-                  <span className={cn("text-xs font-medium", isActive ? "text-primary" : "text-foreground")}>{STAGE_LABELS[stage]}</span>
+                  <span className={cn("text-xs font-medium", isActive ? "text-primary" : isImplementStage && count > 0 ? "text-emerald-400" : "text-foreground")}>{STAGE_LABELS[stage]}</span>
                   <span className={cn(
                     "text-[10px] leading-none hidden md:block",
                     isActive ? "text-primary/70" : "text-muted-foreground"
@@ -383,7 +415,7 @@ export default function InnovationsPage() {
                   <span className={cn(
                     "mt-1 inline-flex items-center justify-center h-5 min-w-5 rounded-full text-[10px] font-bold",
                     count > 0
-                      ? isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                      ? isActive ? "bg-primary text-primary-foreground" : isImplementStage ? "bg-emerald-500 text-white" : "bg-muted text-foreground"
                       : "bg-muted/50 text-muted-foreground"
                   )}>{count}</span>
                   {idx < STAGES.length - 1 && (
@@ -455,7 +487,10 @@ export default function InnovationsPage() {
                   </span>
                   <span className="text-[10px] text-muted-foreground">{(byStage[stage] ?? []).length}</span>
                 </div>
-                <div className="flex-1 space-y-2 min-h-[100px] rounded-lg bg-muted/10 border border-border/30 p-2">
+                <div className={cn(
+                  "flex-1 space-y-2 min-h-[100px] rounded-lg border p-2",
+                  stage === "implement" ? "bg-emerald-500/5 border-emerald-500/20" : "bg-muted/10 border-border/30"
+                )}>
                   {(byStage[stage] ?? []).length === 0 ? (
                     <div className="flex items-center justify-center h-20 text-muted-foreground/40">
                       <span className="text-xs">Keine Items</span>
@@ -474,11 +509,15 @@ export default function InnovationsPage() {
           <div className="space-y-1.5">
             {filtered.map((inn) => {
               const stageIdx = STAGES.indexOf(inn.stage as typeof STAGES[number]);
+              const isImplement = inn.stage === "implement";
               return (
                 <div
                   key={inn.id}
                   onClick={() => setSelectedInnovation(inn)}
-                  className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/40 hover:bg-card/70 px-4 py-3 cursor-pointer transition-all group"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg border bg-card/40 hover:bg-card/70 px-4 py-3 cursor-pointer transition-all group",
+                    isImplement ? "border-emerald-500/30" : "border-border/50"
+                  )}
                 >
                   <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", STATUS_DOT[inn.status ?? "yellow"] || "bg-muted")} />
                   <div className="flex-1 min-w-0">
@@ -486,6 +525,9 @@ export default function InnovationsPage() {
                     {inn.value_proposition && <p className="text-[11px] text-muted-foreground truncate">{inn.value_proposition}</p>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {isImplement && (
+                      <Badge variant="outline" className="text-[9px] h-4 border-emerald-500/30 text-emerald-400">Intake bereit</Badge>
+                    )}
                     {(inn.trend_data?.length ?? 0) > 0 && (
                       <Badge variant="outline" className="text-[9px] h-4">{inn.trend_data.length} Trends</Badge>
                     )}
