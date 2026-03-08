@@ -109,16 +109,28 @@ export default function PoliciesPage() {
 
   return (
     <AppLayout>
-      {chatMode ? (
+      {chatMode || chatEditGuideline ? (
         <div className="p-6 max-w-7xl">
           <GuidelineChatCreator
             userId={user.id}
-            onClose={() => setChatMode(false)}
+            editingGuideline={chatEditGuideline}
+            onClose={() => { setChatMode(false); setChatEditGuideline(null); }}
             onSave={(data) => {
               createMutation.mutate(data, {
                 onSuccess: () => {
                   toast.success('Guideline per Chat erstellt!');
                   setChatMode(false);
+                  setChatEditGuideline(null);
+                },
+                onError: (err) => toast.error('Fehler: ' + err.message),
+              });
+            }}
+            onUpdate={(data) => {
+              updateMutation.mutate(data as any, {
+                onSuccess: () => {
+                  toast.success('Guideline per Chat aktualisiert!');
+                  setChatMode(false);
+                  setChatEditGuideline(null);
                 },
                 onError: (err) => toast.error('Fehler: ' + err.message),
               });
