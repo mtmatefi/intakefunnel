@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { innovations, workspace_external_id } = body;
+    const { innovations, workspace_external_id, work_items } = body;
 
     if (!innovations || !Array.isArray(innovations)) {
       return new Response(JSON.stringify({ error: "innovations array required" }), {
@@ -78,10 +78,79 @@ Deno.serve(async (req) => {
         .select()
         .single();
 
-      results.push({ external_id: inn.id, success: !error, error: error?.message });
+      results.push({ external_id: inn.id, success: !error, error: error?.message, local_id: data?.id });
     }
 
-    return new Response(JSON.stringify({ synced: results.length, results }), {
+    // ── Sync work items (epics/features/stories) ──
+    const workItemResults = [];
+    if (work_items && Array.isArray(work_items)) {
+      // Build a map of external_id → innovation local id
+      const innovationMap: Record<string, string> = {};
+      for (const r of results) {
+        if (r.local_id) innovationMap[r.external_id] = r.local_id;
+      }
+      // Also look up existing innovations for items referencing known external_ids
+      const uniqueInnovationExternalIds = [...new Set(work_items.map((wi: any) => wi.innovation_external_id))];
+      for (const extId of uniqueInnovationExternalIds) {
+        if (!innovationMap[extId]) {
+          const { data: existing } = await supabase
+            .from("synced_innovations")
+            .select("id")
+            .eq("external_id", extId)
+            .maybeSingle();
+          if (existing) innovationMap[extId] = existing.id;
+        }
+      }
+
+      // First pass: upsert all items (without parent_id to avoid FK issues)
+      const externalToLocalId: Record<string, string> = {};
+      for (const wi of work_items) {
+        const innovationLocalId = innovationMap[wi.innovation_external_id];
+        if (!innovationLocalId) {
+          workItemResults.push({ external_id: wi.id, success: false, error: "Innovation not found" });
+          continue;
+        }
+
+        const record = {
+          innovation_id: innovationLocalId,
+          external_id: wi.id,
+          item_type: wi.type || "epic",
+          title: wi.title,
+          description: wi.description || null,
+          status: wi.status || "todo",
+          assignee: wi.assignee || null,
+          source_app: "strategy_sculptor",
+          synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data, error } = await supabase
+          .from("innovation_work_items")
+          .upsert(record, { onConflict: "external_id,innovation_id" })
+          .select("id, external_id")
+          .single();
+
+        if (data) externalToLocalId[wi.id] = data.id;
+        workItemResults.push({ external_id: wi.id, success: !error, error: error?.message });
+      }
+
+      // Second pass: set parent_id references
+      for (const wi of work_items) {
+        if (wi.parent_id && externalToLocalId[wi.id] && externalToLocalId[wi.parent_id]) {
+          await supabase
+            .from("innovation_work_items")
+            .update({ parent_id: externalToLocalId[wi.parent_id] })
+            .eq("id", externalToLocalId[wi.id]);
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({
+      synced: results.length,
+      results,
+      work_items_synced: workItemResults.length,
+      work_item_results: workItemResults,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
