@@ -381,6 +381,44 @@ export type Database = {
           },
         ]
       }
+      innovation_feedback: {
+        Row: {
+          comment: string
+          created_at: string
+          feedback_type: string
+          id: string
+          innovation_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          innovation_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          innovation_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "innovation_feedback_innovation_id_fkey"
+            columns: ["innovation_id"]
+            isOneToOne: false
+            referencedRelation: "synced_innovations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intakes: {
         Row: {
           category: string | null
@@ -679,6 +717,89 @@ export type Database = {
             columns: ["intake_id"]
             isOneToOne: false
             referencedRelation: "intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      synced_innovations: {
+        Row: {
+          created_at: string
+          description: string | null
+          effort_estimate: string | null
+          expected_outcome: string | null
+          external_id: string
+          hypothesis: string | null
+          id: string
+          impact_data: Json | null
+          learnings: string | null
+          product_name: string | null
+          responsible: string | null
+          risk_data: Json | null
+          source_app: string
+          stage: string
+          status: string | null
+          synced_at: string
+          target_date: string | null
+          title: string
+          trend_data: Json | null
+          updated_at: string
+          value_proposition: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          effort_estimate?: string | null
+          expected_outcome?: string | null
+          external_id: string
+          hypothesis?: string | null
+          id?: string
+          impact_data?: Json | null
+          learnings?: string | null
+          product_name?: string | null
+          responsible?: string | null
+          risk_data?: Json | null
+          source_app?: string
+          stage?: string
+          status?: string | null
+          synced_at?: string
+          target_date?: string | null
+          title: string
+          trend_data?: Json | null
+          updated_at?: string
+          value_proposition?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          effort_estimate?: string | null
+          expected_outcome?: string | null
+          external_id?: string
+          hypothesis?: string | null
+          id?: string
+          impact_data?: Json | null
+          learnings?: string | null
+          product_name?: string | null
+          responsible?: string | null
+          risk_data?: Json | null
+          source_app?: string
+          stage?: string
+          status?: string | null
+          synced_at?: string
+          target_date?: string | null
+          title?: string
+          trend_data?: Json | null
+          updated_at?: string
+          value_proposition?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "synced_innovations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
