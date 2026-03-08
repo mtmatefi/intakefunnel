@@ -11,25 +11,37 @@ interface Workspace {
   updated_at: string;
   external_workspace_id?: string | null;
   external_source?: string | null;
+  status?: string;
+  deleted_at?: string | null;
 }
 
 interface WorkspaceContextType {
   workspace: Workspace | null;
   workspaces: Workspace[];
+  trashedWorkspaces: Workspace[];
   setWorkspace: (ws: Workspace) => void;
   loading: boolean;
   createWorkspace: (name: string, description?: string, syncToSculptor?: boolean) => Promise<Workspace | null>;
   syncWorkspaceToSculptor: (workspaceId: string) => Promise<boolean>;
+  unlinkFromSculptor: (workspaceId: string) => Promise<boolean>;
+  moveToTrash: (workspaceId: string) => Promise<boolean>;
+  restoreFromTrash: (workspaceId: string) => Promise<boolean>;
+  permanentlyDelete: (workspaceId: string) => Promise<boolean>;
   refreshWorkspaces: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType>({
   workspace: null,
   workspaces: [],
+  trashedWorkspaces: [],
   setWorkspace: () => {},
   loading: true,
   createWorkspace: async () => null,
   syncWorkspaceToSculptor: async () => false,
+  unlinkFromSculptor: async () => false,
+  moveToTrash: async () => false,
+  restoreFromTrash: async () => false,
+  permanentlyDelete: async () => false,
   refreshWorkspaces: async () => {},
 });
 
@@ -41,11 +53,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [workspace, setWorkspaceState] = useState<Workspace | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [trashedWorkspaces, setTrashedWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadWorkspaces = useCallback(async () => {
     if (!user) {
       setWorkspaces([]);
+      setTrashedWorkspaces([]);
       setWorkspaceState(null);
       setLoading(false);
       return;
@@ -57,16 +71,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       .select("*")
       .order("created_at", { ascending: false });
 
-    const ws = (data ?? []) as Workspace[];
-    setWorkspaces(ws);
+    const all = (data ?? []) as Workspace[];
+    const active = all.filter((w) => (w.status ?? "active") !== "trashed");
+    const trashed = all.filter((w) => w.status === "trashed");
+    setWorkspaces(active);
+    setTrashedWorkspaces(trashed);
 
     const savedId = localStorage.getItem(WS_STORAGE_KEY);
-    const saved = ws.find((w) => w.id === savedId);
+    const saved = active.find((w) => w.id === savedId);
     if (saved) {
       setWorkspaceState(saved);
-    } else if (ws.length > 0) {
-      setWorkspaceState(ws[0]);
-      localStorage.setItem(WS_STORAGE_KEY, ws[0].id);
+    } else if (active.length > 0) {
+      setWorkspaceState(active[0]);
+      localStorage.setItem(WS_STORAGE_KEY, active[0].id);
+    } else {
+      setWorkspaceState(null);
     }
     setLoading(false);
   }, [user]);
@@ -86,11 +105,73 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         body: { action: "sync_workspace_to_sculptor", workspace_id: workspaceId },
       });
       if (error) throw error;
-      // Refresh to get updated external_workspace_id
       await loadWorkspaces();
       return true;
     } catch (err) {
       console.error("Sync to sculptor failed:", err);
+      return false;
+    }
+  }, [loadWorkspaces]);
+
+  const unlinkFromSculptor = useCallback(async (workspaceId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("workspaces")
+        .update({ external_workspace_id: null, external_source: null, status: "active" } as any)
+        .eq("id", workspaceId);
+      if (error) throw error;
+      await loadWorkspaces();
+      return true;
+    } catch (err) {
+      console.error("Unlink failed:", err);
+      return false;
+    }
+  }, [loadWorkspaces]);
+
+  const moveToTrash = useCallback(async (workspaceId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("workspaces")
+        .update({ status: "trashed", deleted_at: new Date().toISOString() } as any)
+        .eq("id", workspaceId);
+      if (error) throw error;
+      if (workspace?.id === workspaceId) {
+        setWorkspaceState(null);
+        localStorage.removeItem(WS_STORAGE_KEY);
+      }
+      await loadWorkspaces();
+      return true;
+    } catch (err) {
+      console.error("Move to trash failed:", err);
+      return false;
+    }
+  }, [loadWorkspaces, workspace]);
+
+  const restoreFromTrash = useCallback(async (workspaceId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("workspaces")
+        .update({ status: "active", deleted_at: null } as any)
+        .eq("id", workspaceId);
+      if (error) throw error;
+      await loadWorkspaces();
+      return true;
+    } catch (err) {
+      console.error("Restore failed:", err);
+      return false;
+    }
+  }, [loadWorkspaces]);
+
+  const permanentlyDelete = useCallback(async (workspaceId: string): Promise<boolean> => {
+    try {
+      // Delete members first, then workspace
+      await supabase.from("workspace_members").delete().eq("workspace_id", workspaceId);
+      const { error } = await supabase.from("workspaces").delete().eq("id", workspaceId);
+      if (error) throw error;
+      await loadWorkspaces();
+      return true;
+    } catch (err) {
+      console.error("Permanent delete failed:", err);
       return false;
     }
   }, [loadWorkspaces]);
@@ -117,7 +198,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setWorkspaces((prev) => [newWs, ...prev]);
     setWorkspace(newWs);
 
-    // Optionally sync to Strategy Sculptor
     if (syncToSculptor) {
       await syncWorkspaceToSculptor(newWs.id);
     }
@@ -126,7 +206,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [user, setWorkspace, syncWorkspaceToSculptor]);
 
   return (
-    <WorkspaceContext.Provider value={{ workspace, workspaces, setWorkspace, loading, createWorkspace, syncWorkspaceToSculptor, refreshWorkspaces: loadWorkspaces }}>
+    <WorkspaceContext.Provider value={{
+      workspace, workspaces, trashedWorkspaces, setWorkspace, loading,
+      createWorkspace, syncWorkspaceToSculptor, unlinkFromSculptor,
+      moveToTrash, restoreFromTrash, permanentlyDelete, refreshWorkspaces: loadWorkspaces,
+    }}>
       {children}
     </WorkspaceContext.Provider>
   );
