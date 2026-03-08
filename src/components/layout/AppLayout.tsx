@@ -32,6 +32,8 @@ import {
   Bell,
   Globe,
   Wrench,
+  Building2,
+  ChevronsUpDown,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
