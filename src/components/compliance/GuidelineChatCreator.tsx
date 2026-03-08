@@ -323,7 +323,6 @@ export function GuidelineChatCreator({ onSave, onUpdate, userId, onClose, editin
                   {isEditing ? `Bearbeiten: ${existingGuideline?.name}` : 'KI Guideline-Assistent'}
                 </CardTitle>
               </div>
-              </div>
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
