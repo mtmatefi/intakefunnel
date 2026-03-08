@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.translate-work-items]
 verify_jwt = false
+
+[functions.publish-delivery-package]
+verify_jwt = false
