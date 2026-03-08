@@ -34,6 +34,7 @@ import {
   Wrench,
   Building2,
   Link2,
+  Lightbulb,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
