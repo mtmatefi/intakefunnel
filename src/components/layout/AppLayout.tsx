@@ -26,6 +26,7 @@ import {
   UserCog,
   X,
   BarChart3,
+  GraduationCap,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
