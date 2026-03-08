@@ -11,6 +11,7 @@ import { ComplianceStats } from '@/components/compliance/ComplianceStats';
 import { GuidelineCard } from '@/components/compliance/GuidelineCard';
 import { GuidelineEditorDialog } from '@/components/compliance/GuidelineEditorDialog';
 import { GuidelineChatCreator } from '@/components/compliance/GuidelineChatCreator';
+import { useVersionedGuidelineUpdate } from '@/hooks/useGuidelineVersions';
 import {
   useGuidelines,
   useCreateGuideline,
