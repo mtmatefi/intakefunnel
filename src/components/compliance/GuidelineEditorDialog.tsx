@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,34 +20,16 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Sparkles, X } from 'lucide-react';
-import { COMPLIANCE_FRAMEWORKS } from './ComplianceFrameworkTabs';
+import {
+  COMPLIANCE_FRAMEWORKS,
+  FRAMEWORK_RISK_CATEGORIES,
+  FRAMEWORK_TYPES,
+  FRAMEWORK_AI_CONTEXT,
+} from './ComplianceFrameworkTabs';
 import type { Guideline, GuidelineInsert } from '@/hooks/useGuidelines';
 import { useAllInitiativeLinks } from '@/hooks/useInitiativeLinks';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-const RISK_CATEGORIES = [
-  'Datenklassifizierung',
-  'Exportkontrolle',
-  'Zugangskontrolle',
-  'Verschlüsselung',
-  'Audit-Trail',
-  'Verfügbarkeit',
-  'Incident Response',
-  'Drittanbieter-Risiko',
-  'Intellectual Property',
-  'Regulatorisch',
-  'Operationell',
-  'Strategisch',
-];
-
-const GUIDELINE_TYPES = [
-  'policy',
-  'standard',
-  'procedure',
-  'control',
-  'checklist',
-];
 
 interface Props {
   open: boolean;
@@ -80,6 +62,25 @@ export function GuidelineEditorDialog({
   const [reviewDays, setReviewDays] = useState(365);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Get domain-specific data based on selected framework
+  const riskCategories = useMemo(
+    () => FRAMEWORK_RISK_CATEGORIES[framework] || FRAMEWORK_RISK_CATEGORIES.general,
+    [framework]
+  );
+
+  const typeOptions = useMemo(
+    () => FRAMEWORK_TYPES[framework] || FRAMEWORK_TYPES._default,
+    [framework]
+  );
+
+  // Reset type when framework changes if current type is not valid
+  useEffect(() => {
+    const validTypes = typeOptions.map((t) => t.value);
+    if (!validTypes.includes(type)) {
+      setType(validTypes[0]);
+    }
+  }, [framework, typeOptions]);
+
   useEffect(() => {
     if (guideline) {
       setName(guideline.name);
@@ -97,7 +98,7 @@ export function GuidelineEditorDialog({
       setContent('');
       setFramework(defaultFramework && defaultFramework !== 'all' ? defaultFramework : 'general');
       setSeverity('medium');
-      setType('policy');
+      setType(typeOptions[0]?.value || 'policy');
       setSelectedRisks([]);
       setSelectedInitiatives([]);
       setReviewDays(365);
@@ -124,42 +125,39 @@ export function GuidelineEditorDialog({
 
     setIsGenerating(true);
     try {
-      const riskContext = selectedRisks.length > 0 ? `\nRisikokategorien: ${selectedRisks.join(', ')}` : '';
+      const riskContext = selectedRisks.length > 0 ? `\nAusgewählte Risikokategorien: ${selectedRisks.join(', ')}` : '';
       const initiativeContext =
         selectedInitiatives.length > 0 && initiatives
-          ? `\nVerknüpfte Initiativen: ${initiatives
+          ? `\nVerknüpfte Initiativen aus Strategy Sculptor: ${initiatives
               .filter((i) => selectedInitiatives.includes(i.initiative_id))
               .map((i) => `${i.initiative_title} (${JSON.stringify(i.initiative_data)})`)
               .join('; ')}`
           : '';
 
       const frameworkLabel = COMPLIANCE_FRAMEWORKS.find((f) => f.id === framework)?.label || framework;
+      const typeLabel = typeOptions.find((t) => t.value === type)?.label || type;
+      const domainContext = FRAMEWORK_AI_CONTEXT[framework] || FRAMEWORK_AI_CONTEXT.general;
 
       const { data, error } = await supabase.functions.invoke('generate-spec', {
         body: {
-          prompt: `Du bist ein Compliance- und Security-Experte. Erstelle eine umfassende Guideline/Policy auf Deutsch für folgendes:
+          prompt: `Du bist ein erfahrener ${getExpertRole(framework)}. 
+Erstelle eine umfassende, professionelle Guideline auf Deutsch.
 
-Framework: ${frameworkLabel}
-Typ: ${type}
-Name: ${name || 'Noch nicht definiert'}
-Beschreibung: ${description || 'Nicht angegeben'}
-Schweregrad: ${severity}${riskContext}${initiativeContext}
+## Kontext
+- **Domain**: ${frameworkLabel}
+- **Dokumenttyp**: ${typeLabel}
+- **Name**: ${name || 'Noch nicht definiert'}
+- **Beschreibung**: ${description || 'Nicht angegeben'}
+- **Schweregrad**: ${severity}${riskContext}${initiativeContext}
 
-Erstelle eine vollständige, professionelle Guideline im Markdown-Format mit:
-1. **Zweck & Geltungsbereich**
-2. **Definitionen**
-3. **Anforderungen** (nummeriert)
-4. **Kontrollen & Maßnahmen**
-5. **Verantwortlichkeiten** (RACI-Matrix falls relevant)
-6. **Ausnahmen & Eskalation**
-7. **Review-Zyklus & Aktualisierung**
+## Fachspezifische Anforderungen
+${domainContext}
 
-Bei ITAR: Beachte ITAR §120-130, Defense Articles, Technical Data, Export Licensing.
-Bei Export Control: Beachte EAR, CCL, ECCN Klassifizierung.
-Bei Security: Beachte ISO 27001 Controls, NIST CSF.
-Bei DSGVO: Beachte Art. 5-49 DSGVO, TOM, DSFA.
+## Ausgabeformat
+Erstelle die Guideline im Markdown-Format. Sei präzise, praxisorientiert und referenziere die relevanten Standards/Frameworks.
+Verwende konkrete Beispiele und messbare Kriterien wo möglich.
 
-Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus ab.`,
+Wenn Initiativen verknüpft sind, leite konkrete Risiken, Maßnahmen und Architektur-Entscheidungen daraus ab.`,
         },
       });
 
@@ -221,6 +219,21 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
     onOpenChange(false);
   };
 
+  // Framework-specific placeholder for name
+  const namePlaceholder = useMemo(() => {
+    const placeholders: Record<string, string> = {
+      enterprise_arch: 'z.B. Technology Radar Policy – Cloud-Native First',
+      solution_arch: 'z.B. API Design Standard – RESTful Services v2',
+      security: 'z.B. Zero Trust Network Access Policy',
+      devops: 'z.B. CI/CD Pipeline Standard – Trunk-Based Development',
+      itar: 'z.B. ITAR Technical Data Access Control Policy',
+      ear_export: 'z.B. ECCN Classification Procedure',
+      gdpr: 'z.B. Verarbeitungsverzeichnis-Richtlinie',
+      iso27001: 'z.B. A.9 Zugangssteuerung – Passwort-Policy',
+    };
+    return placeholders[framework] || 'Name der Guideline';
+  }, [framework]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -229,7 +242,7 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
           <DialogDescription>
             {isEditing
               ? 'Passen Sie die Guideline an'
-              : 'Erstellen Sie eine neue Compliance-Guideline – optional mit KI-Unterstützung'}
+              : 'Erstellen Sie eine neue Guideline – optional mit KI-Unterstützung'}
           </DialogDescription>
         </DialogHeader>
 
@@ -237,7 +250,7 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
           {/* Row 1: Framework + Severity + Type */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Framework</Label>
+              <Label className="text-xs font-medium">Domain / Framework</Label>
               <Select value={framework} onValueChange={setFramework}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -248,27 +261,25 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Schweregrad</Label>
+              <Label className="text-xs font-medium">Schweregrad</Label>
               <Select value={severity} onValueChange={setSeverity}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="critical">Kritisch</SelectItem>
-                  <SelectItem value="high">Hoch</SelectItem>
-                  <SelectItem value="medium">Mittel</SelectItem>
-                  <SelectItem value="low">Niedrig</SelectItem>
+                  <SelectItem value="critical">🔴 Kritisch</SelectItem>
+                  <SelectItem value="high">🟠 Hoch</SelectItem>
+                  <SelectItem value="medium">🟡 Mittel</SelectItem>
+                  <SelectItem value="low">🟢 Niedrig</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Typ</Label>
+              <Label className="text-xs font-medium">Dokumenttyp</Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="policy">Policy</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="procedure">Procedure</SelectItem>
-                  <SelectItem value="control">Control</SelectItem>
-                  <SelectItem value="checklist">Checklist</SelectItem>
+                  {typeOptions.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -276,23 +287,25 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
 
           {/* Name + Description */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="z.B. ITAR Technical Data Access Control Policy" />
+            <Label className="text-xs font-medium">Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={namePlaceholder} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Beschreibung</Label>
+            <Label className="text-xs font-medium">Beschreibung</Label>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kurze Zusammenfassung der Guideline" />
           </div>
 
-          {/* Risk Categories */}
+          {/* Domain-specific Risk/Topic Categories */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Risikokategorien</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {RISK_CATEGORIES.map((risk) => (
+            <Label className="text-xs font-medium">
+              {getCategoryLabel(framework)}
+            </Label>
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1">
+              {riskCategories.map((risk) => (
                 <Badge
                   key={risk}
                   variant={selectedRisks.includes(risk) ? 'default' : 'outline'}
-                  className="cursor-pointer text-xs"
+                  className="cursor-pointer text-xs transition-colors"
                   onClick={() => toggleRisk(risk)}
                 >
                   {risk}
@@ -305,13 +318,13 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
           {/* Linked Initiatives from Strategy Sculptor */}
           {initiatives && initiatives.length > 0 && (
             <div className="space-y-1.5">
-              <Label className="text-xs">Verknüpfte Initiativen (Strategy Sculptor)</Label>
-              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+              <Label className="text-xs font-medium">Verknüpfte Initiativen (Strategy Sculptor)</Label>
+              <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto p-1">
                 {initiatives.map((init) => (
                   <Badge
                     key={init.initiative_id}
                     variant={selectedInitiatives.includes(init.initiative_id) ? 'default' : 'outline'}
-                    className="cursor-pointer text-xs"
+                    className="cursor-pointer text-xs transition-colors"
                     onClick={() => toggleInitiative(init.initiative_id)}
                   >
                     {init.initiative_title}
@@ -324,7 +337,7 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
 
           {/* Review Frequency */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Review-Zyklus (Tage)</Label>
+            <Label className="text-xs font-medium">Review-Zyklus (Tage)</Label>
             <Input
               type="number"
               value={reviewDays}
@@ -337,7 +350,7 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
           {/* Content with AI button */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">Inhalt (Markdown)</Label>
+              <Label className="text-xs font-medium">Inhalt (Markdown)</Label>
               <Button
                 variant="outline"
                 size="sm"
@@ -350,13 +363,13 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
-                {isGenerating ? 'Generiere...' : 'KI-Guideline generieren'}
+                {isGenerating ? 'Generiere...' : `KI: ${getAIButtonLabel(framework)}`}
               </Button>
             </div>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Guideline-Inhalt im Markdown-Format..."
+              placeholder={getContentPlaceholder(framework)}
               className="min-h-[200px] font-mono text-sm"
             />
           </div>
@@ -369,4 +382,55 @@ Wenn Initiativen verknüpft sind, leite konkrete Risiken und Maßnahmen daraus a
       </DialogContent>
     </Dialog>
   );
+}
+
+// Helper functions
+function getExpertRole(framework: string): string {
+  const roles: Record<string, string> = {
+    enterprise_arch: 'Enterprise Architect mit Expertise in TOGAF, Zachman und Business Capability Modeling',
+    solution_arch: 'Solution Architect mit Expertise in Cloud-Native, Microservices, DDD und Arc42',
+    security: 'Chief Information Security Officer (CISO) mit Expertise in NIST CSF, ISO 27001 und OWASP',
+    devops: 'DevOps/SRE Lead mit Expertise in DORA Metrics, GitOps und Platform Engineering',
+    itar: 'ITAR Compliance Officer mit Expertise in US Export Controls und Defense Trade',
+    ear_export: 'Export Control Compliance Spezialist mit EAR und Sanctions Expertise',
+    gdpr: 'Datenschutzbeauftragter mit DSGVO, BDSG und BSI Grundschutz Expertise',
+    iso27001: 'ISO 27001 Lead Auditor mit ISMS Implementierungserfahrung',
+    risk_management: 'Enterprise Risk Manager mit ISO 31000 und COSO ERM Expertise',
+  };
+  return roles[framework] || 'Governance & Compliance Experte';
+}
+
+function getCategoryLabel(framework: string): string {
+  const labels: Record<string, string> = {
+    enterprise_arch: 'Architecture Domains & Concerns',
+    solution_arch: 'Design Patterns & Quality Attributes',
+    security: 'Security Controls & Threat Categories',
+    devops: 'DevOps Practices & Capabilities',
+    itar: 'ITAR Compliance Areas',
+    ear_export: 'Export Control Areas',
+    gdpr: 'DSGVO Anforderungsbereiche',
+    iso27001: 'ISO 27001 Annex A Controls',
+    risk_management: 'Risikokategorien',
+  };
+  return labels[framework] || 'Risiko- & Themenkategorien';
+}
+
+function getAIButtonLabel(framework: string): string {
+  const labels: Record<string, string> = {
+    enterprise_arch: 'EA Principle generieren',
+    solution_arch: 'Solution Pattern generieren',
+    security: 'Security Policy generieren',
+    devops: 'DevOps Standard generieren',
+  };
+  return labels[framework] || 'Guideline generieren';
+}
+
+function getContentPlaceholder(framework: string): string {
+  const placeholders: Record<string, string> = {
+    enterprise_arch: '# Architecture Principle\n\n## Statement\n...\n\n## Rationale\n...\n\n## Implications\n...',
+    solution_arch: '# Solution Blueprint\n\n## Context\n...\n\n## Quality Goals\n...\n\n## Building Blocks\n...',
+    security: '# Security Policy\n\n## Scope\n...\n\n## Controls\n...\n\n## Threat Model\n...',
+    devops: '# Pipeline Standard\n\n## Stages\n...\n\n## Quality Gates\n...\n\n## SLOs\n...',
+  };
+  return placeholders[framework] || 'Guideline-Inhalt im Markdown-Format...';
 }
