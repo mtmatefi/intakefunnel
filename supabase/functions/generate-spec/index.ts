@@ -519,9 +519,29 @@ serve(async (req) => {
 
     if (routingError) {
       console.error("Failed to save routing score:", routingError);
-      // Don't throw - spec was saved successfully
     } else {
       console.log("Routing score saved:", savedRouting.id);
+    }
+
+    // Fire-and-forget: Generate work items (Epics/Features/Stories) from spec
+    try {
+      console.log("Triggering work item generation for intake:", intakeId);
+      const wiUrl = `${supabaseUrl}/functions/v1/generate-work-items`;
+      fetch(wiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({ intakeId }),
+      }).then(async (resp) => {
+        const result = await resp.json().catch(() => ({}));
+        console.log("Work items generation result:", resp.status, result);
+      }).catch((err) => {
+        console.warn("Work items generation failed:", err);
+      });
+    } catch (wiErr) {
+      console.warn("Failed to trigger work item generation:", wiErr);
     }
 
     // Auto-create or update Jira Product Discovery ticket
