@@ -1,13 +1,16 @@
 import { useState } from "react";
 import type { WorkItemTree } from "@/hooks/useWorkItems";
+import { useTranslateWorkItems } from "@/hooks/useWorkItems";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   ChevronDown, ChevronRight, ExternalLink, GitBranch,
   CheckCircle2, ListChecks, ShieldCheck, Gauge, Target, X,
+  Languages, Loader2,
 } from "lucide-react";
 
 const ITEM_TYPE_ICONS: Record<string, string> = { epic: "📦", feature: "✨", story: "📝" };
@@ -92,7 +95,7 @@ function TreeNode({
 }
 
 // ── Right: Detail panel ──
-function DetailPanel({ item }: { item: WorkItemTree }) {
+function DetailPanel({ item, onTranslate, isTranslating }: { item: WorkItemTree; onTranslate?: () => void; isTranslating?: boolean }) {
   const hasAC = item.acceptance_criteria && item.acceptance_criteria.length > 0;
   const hasFR = item.functional_requirements && item.functional_requirements.length > 0;
   const hasNFR = item.non_functional_requirements && item.non_functional_requirements.length > 0;
@@ -102,21 +105,29 @@ function DetailPanel({ item }: { item: WorkItemTree }) {
       <div className="p-5 space-y-5">
         {/* Header */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg">{ITEM_TYPE_ICONS[item.item_type]}</span>
-            <Badge variant="outline" className="text-xs">{ITEM_TYPE_LABELS[item.item_type]}</Badge>
-            {item.priority && (
-              <Badge variant="secondary" className={cn("text-xs", PRIORITY_COLORS[item.priority] || "")}>
-                {item.priority}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-lg">{ITEM_TYPE_ICONS[item.item_type]}</span>
+              <Badge variant="outline" className="text-xs">{ITEM_TYPE_LABELS[item.item_type]}</Badge>
+              {item.priority && (
+                <Badge variant="secondary" className={cn("text-xs", PRIORITY_COLORS[item.priority] || "")}>
+                  {item.priority}
+                </Badge>
+              )}
+              <Badge variant="secondary" className={cn("text-xs", STATUS_COLORS[item.status] || "")}>
+                {item.status}
               </Badge>
-            )}
-            <Badge variant="secondary" className={cn("text-xs", STATUS_COLORS[item.status] || "")}>
-              {item.status}
-            </Badge>
-            {item.story_points != null && (
-              <Badge variant="outline" className="text-xs">
-                {item.story_points} Story Points
-              </Badge>
+              {item.story_points != null && (
+                <Badge variant="outline" className="text-xs">
+                  {item.story_points} Story Points
+                </Badge>
+              )}
+            </div>
+            {onTranslate && (
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs shrink-0" onClick={onTranslate} disabled={isTranslating}>
+                {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                EN
+              </Button>
             )}
           </div>
           <h2 className="text-base font-semibold text-foreground leading-snug">{item.title}</h2>
@@ -275,14 +286,46 @@ function StatsBar({ items }: { items: WorkItemTree[] }) {
 // ── Main export ──
 export function WorkItemDetailView({
   tree,
+  innovationId,
   innovationTitle,
   onClose,
 }: {
   tree: WorkItemTree[];
+  innovationId: string;
   innovationTitle: string;
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState<WorkItemTree | null>(null);
+  const translateMutation = useTranslateWorkItems();
+
+  const allItemIds = flattenTree(tree).map((i) => i.id);
+
+  const handleTranslateAll = async () => {
+    try {
+      const result = await translateMutation.mutateAsync({
+        workItemIds: allItemIds,
+        innovationId,
+        targetLanguage: "en",
+      });
+      toast.success(`${result.translated_count} Items ins Englische übersetzt`);
+    } catch (e: any) {
+      toast.error(e?.message || "Übersetzung fehlgeschlagen");
+    }
+  };
+
+  const handleTranslateOne = async (item: WorkItemTree) => {
+    const ids = [item.id, ...flattenTree(item.children).map((c) => c.id)];
+    try {
+      const result = await translateMutation.mutateAsync({
+        workItemIds: ids,
+        innovationId,
+        targetLanguage: "en",
+      });
+      toast.success(`${result.translated_count} Items übersetzt`);
+    } catch (e: any) {
+      toast.error(e?.message || "Übersetzung fehlgeschlagen");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -292,9 +335,21 @@ export function WorkItemDetailView({
           <GitBranch className="h-4 w-4 text-primary" />
           <h1 className="text-sm font-semibold">{innovationTitle} – Work Items</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5">
-          <X className="h-4 w-4" /> Schließen
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            disabled={translateMutation.isPending || allItemIds.length === 0}
+            onClick={handleTranslateAll}
+          >
+            {translateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
+            Alle übersetzen (EN)
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5">
+            <X className="h-4 w-4" /> Schließen
+          </Button>
+        </div>
       </div>
 
       <StatsBar items={tree} />
@@ -314,7 +369,15 @@ export function WorkItemDetailView({
 
         {/* Right: detail */}
         <div className="flex-1 min-w-0 bg-background">
-          {selected ? <DetailPanel item={selected} /> : <EmptyDetail />}
+          {selected ? (
+            <DetailPanel
+              item={selected}
+              onTranslate={() => handleTranslateOne(selected)}
+              isTranslating={translateMutation.isPending}
+            />
+          ) : (
+            <EmptyDetail />
+          )}
         </div>
       </div>
     </div>

@@ -89,3 +89,24 @@ export function useExportWorkItemsToJira() {
     },
   });
 }
+
+export function useTranslateWorkItems() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ workItemIds, innovationId, targetLanguage = 'en' }: { 
+      workItemIds: string[]; 
+      innovationId: string;
+      targetLanguage?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke('translate-work-items', {
+        body: { workItemIds, targetLanguage },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-items', variables.innovationId] });
+    },
+  });
+}
