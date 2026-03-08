@@ -84,17 +84,30 @@ export function useInnovationFeedback(innovationId?: string) {
     queryKey: ['innovation-feedback', innovationId],
     queryFn: async () => {
       if (!innovationId) return [];
-      // Fetch feedback with author profile join
       const { data, error } = await supabase
         .from('innovation_feedback' as any)
-        .select('*, profiles:user_id(display_name)')
+        .select('*')
         .eq('innovation_id', innovationId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      // Flatten profile into author_display_name
-      return ((data || []) as any[]).map(fb => ({
+      const items = (data || []) as any[];
+      
+      // Fetch profile names for local users
+      const userIds = [...new Set(items.map(fb => fb.user_id).filter(Boolean))];
+      let profileMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, display_name')
+          .in('user_id', userIds);
+        if (profiles) {
+          profileMap = Object.fromEntries(profiles.map(p => [p.user_id, p.display_name]));
+        }
+      }
+
+      return items.map(fb => ({
         ...fb,
-        author_display_name: fb.author_name || fb.profiles?.display_name || 'Unbekannt',
+        author_display_name: fb.author_name || profileMap[fb.user_id] || 'Unbekannt',
       })) as (InnovationFeedback & { author_display_name: string })[];
     },
     enabled: !!innovationId,
