@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { interviewQuestions } from '@/data/demo';
 import type { InterviewQuestion, TranscriptMessage } from '@/types/intake';
 import { cn } from '@/lib/utils';
