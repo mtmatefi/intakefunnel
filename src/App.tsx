@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { TutorialProvider } from "./contexts/TutorialContext";
+import { WorkspaceProvider, useWorkspace } from "./contexts/WorkspaceContext";
 import { TutorialOverlay } from "./components/tutorial/TutorialOverlay";
 import { useTutorial } from "./hooks/useTutorial";
 import { Loader2 } from "lucide-react";
