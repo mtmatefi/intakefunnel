@@ -830,7 +830,30 @@ function generateMarkdown(spec: any): string {
   }
   
   if (spec.openQuestions?.length) {
-    md += `## Open Questions\n${spec.openQuestions.map((q: string) => `- ${q}`).join("\n")}\n`;
+    md += `## Open Questions\n${spec.openQuestions.map((q: string) => `- ${q}`).join("\n")}\n\n`;
+  }
+  
+  // Compliance Assessment section
+  const compliance = spec.complianceAssessment || [];
+  const applicable = compliance.filter((c: any) => c.applicable);
+  if (applicable.length > 0) {
+    md += `## Compliance Assessment\n\n`;
+    md += `| Framework | Guideline | Schweregrad | Status |\n|-----------|-----------|-------------|--------|\n`;
+    applicable.forEach((c: any) => {
+      const statusIcon = c.status === 'compliant' ? '✅' : c.status === 'partially_compliant' ? '⚠️' : '❌';
+      md += `| ${c.framework} | ${c.guidelineName} | ${c.severity} | ${statusIcon} ${c.status} |\n`;
+    });
+    md += `\n`;
+    
+    const allActions = applicable.flatMap((c: any) => (c.requiredActions || []).map((a: string) => `- [${c.framework}] ${a}`));
+    if (allActions.length > 0) {
+      md += `### Erforderliche Maßnahmen\n${allActions.join("\n")}\n\n`;
+    }
+    
+    const allRisks = applicable.flatMap((c: any) => (c.risks || []).map((r: string) => `- [${c.framework}] ${r}`));
+    if (allRisks.length > 0) {
+      md += `### Compliance-Risiken\n${allRisks.join("\n")}\n\n`;
+    }
   }
   
   return md;
