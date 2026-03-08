@@ -25,6 +25,7 @@ import { FollowupDialog } from '@/components/spec/FollowupDialog';
 import { JiraSyncPanel } from '@/components/jira/JiraSyncPanel';
 import { ImpactScoreCard } from '@/components/intake/ImpactScoreCard';
 import { ApprovalDialog } from '@/components/intake/ApprovalDialog';
+import { InitiativeLinkCard } from '@/components/intake/InitiativeLinkCard';
 
 export default function IntakeDetailPage() {
   const { id } = useParams();
