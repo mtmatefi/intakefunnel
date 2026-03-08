@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface ValidationRequest {
@@ -31,11 +31,11 @@ serve(async (req) => {
 
     console.log(`Validating answer for question: ${questionKey} in language: ${language}`);
 
-    // Fetch active guidelines for compliance-aware validation
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Fetch active guidelines for compliance-aware validation
     const { data: guidelines } = await supabase
       .from('guidelines')
       .select('name, compliance_framework, severity, risk_categories')
@@ -44,84 +44,61 @@ serve(async (req) => {
     const guidelinesContext = guidelines && guidelines.length > 0
       ? `\n\nAKTIVE COMPLIANCE-GUIDELINES im Unternehmen:\n${guidelines.map((g: any) =>
           `- [${g.compliance_framework?.toUpperCase()}] ${g.name} (${g.severity}) – Risiken: ${(g.risk_categories || []).join(', ')}`
-        ).join('\n')}\n\nWenn die Antwort des Benutzers Compliance-relevante Aspekte berührt (Daten, Security, Architektur, Export, Regulierung), prüfe gegen diese Guidelines und stelle bei Bedarf Nachfragen zu fehlenden Compliance-Informationen.`
+        ).join('\n')}\n\nWenn die Antwort des Benutzers Compliance-relevante Aspekte berührt, prüfe gegen diese Guidelines.`
       : '';
 
-    const systemPromptDE = `Du bist ein erfahrener Solution Architect und Business Analyst, der Software-Anforderungen sammelt. 
-Deine Aufgabe ist es, Benutzerantworten zu validieren und bei Bedarf Nachfragen zu stellen.
-WICHTIG: Antworte IMMER auf Deutsch!
-${guidelinesContext}
+    // Fetch initiative links from Strategy Sculptor for live matching
+    const { data: initiatives } = await supabase
+      .from('initiative_intake_links')
+      .select('id, initiative_id, initiative_title, initiative_data, source_app, tenant_id')
+      .is('intake_id', null)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
-Antworte IMMER im folgenden JSON-Format:
-{
-  "isComplete": boolean,
-  "quality": "excellent" | "good" | "needs_improvement" | "insufficient",
-  "followUpQuestion": string | null,
-  "suggestions": string[],
-  "enrichedAnswer": string | null,
-  "missingAspects": string[],
-  "complianceFlags": string[]
-}
+    // Also fetch linked initiatives (already assigned to intakes) for context
+    const { data: linkedInitiatives } = await supabase
+      .from('initiative_intake_links')
+      .select('initiative_id, initiative_title, initiative_data')
+      .not('intake_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(30);
 
-Regeln:
-- isComplete: true wenn die Antwort ausreichend detailliert ist
-- quality: Bewertung der Antwortqualität
-- followUpQuestion: Eine spezifische Nachfrage wenn wichtige Infos fehlen (null wenn komplett). Bei Compliance-relevanten Antworten IMMER nach fehlenden regulatorischen/sicherheitsrelevanten Details fragen.
-- suggestions: Konkrete Verbesserungsvorschläge (max 3)
-- enrichedAnswer: Falls du die Antwort für Jira aufbereiten kannst, eine verbesserte Version
-- missingAspects: Was fehlt noch für eine vollständige Spezifikation
-- complianceFlags: Welche Compliance-Guidelines sind durch diese Antwort betroffen (leeres Array wenn keine)
+    let initiativesContext = '';
+    if ((initiatives && initiatives.length > 0) || (linkedInitiatives && linkedInitiatives.length > 0)) {
+      initiativesContext = '\n\n## STRATEGY SCULPTOR – VERFÜGBARE INITIATIVEN & EPICS\n';
+      initiativesContext += 'Folgende strategische Initiativen sind im System. Prüfe ob die Benutzerantworten zu einer dieser Initiativen passen:\n\n';
+      
+      if (initiatives && initiatives.length > 0) {
+        initiativesContext += '### Unverknüpfte Initiativen (können diesem Intake zugeordnet werden):\n';
+        for (const init of initiatives) {
+          const data = init.initiative_data || {};
+          initiativesContext += `- **[${init.initiative_id}] ${init.initiative_title}**`;
+          if (data.description) initiativesContext += ` – ${String(data.description).substring(0, 200)}`;
+          if (data.value_stream) initiativesContext += ` (Value Stream: ${data.value_stream})`;
+          if (data.type) initiativesContext += ` [Typ: ${data.type}]`;
+          initiativesContext += `\n`;
+        }
+      }
 
-Sei freundlich aber gründlich. Stelle Nachfragen insbesondere wenn Compliance-relevante Aspekte fehlen.`;
+      if (linkedInitiatives && linkedInitiatives.length > 0) {
+        initiativesContext += '\n### Bereits verknüpfte Initiativen (Kontext):\n';
+        for (const init of linkedInitiatives) {
+          initiativesContext += `- ${init.initiative_title}\n`;
+        }
+      }
 
-    const systemPromptEN = `You are an experienced Solution Architect and Business Analyst gathering software requirements. 
-Your task is to validate user answers and ask follow-up questions when needed.
-IMPORTANT: Always respond in English!
-${guidelinesContext}
+      initiativesContext += '\nWenn du einen Match findest, gib die initiative_id und den Titel im matchedInitiatives-Array zurück.\n';
+    }
 
-Always respond in the following JSON format:
-{
-  "isComplete": boolean,
-  "quality": "excellent" | "good" | "needs_improvement" | "insufficient",
-  "followUpQuestion": string | null,
-  "suggestions": string[],
-  "enrichedAnswer": string | null,
-  "missingAspects": string[],
-  "complianceFlags": string[]
-}
+    const systemPrompt = language === 'en' 
+      ? buildEnglishPrompt(guidelinesContext, initiativesContext)
+      : buildGermanPrompt(guidelinesContext, initiativesContext);
 
-Rules:
-- isComplete: true if the answer is sufficiently detailed
-- quality: Assessment of answer quality
-- followUpQuestion: A specific follow-up if important info is missing (null if complete). For compliance-relevant answers, ALWAYS ask about missing regulatory/security details.
-- suggestions: Concrete improvement suggestions (max 3)
-- enrichedAnswer: If you can enhance the answer for Jira, an improved version
-- missingAspects: What's still missing for a complete specification
-- complianceFlags: Which compliance guidelines are affected by this answer (empty array if none)
+    const allAnswersContext = Object.entries(previousAnswers).map(([k, v]) => `- ${k}: ${v}`).join('\n') || (language === 'de' ? 'Keine bisherigen Antworten' : 'No previous answers');
 
-Be friendly but thorough. Ask follow-ups especially when compliance-relevant aspects are missing.`;
-
-    const systemPrompt = language === 'en' ? systemPromptEN : systemPromptDE;
-
-    const userPromptDE = `Kategorie: ${category}
-Frage: ${questionText}
-Benutzerantwort: ${userAnswer}
-
-Bisherige Antworten in dieser Session:
-${Object.entries(previousAnswers).map(([k, v]) => `- ${k}: ${v}`).join('\n') || 'Keine bisherigen Antworten'}
-
-Analysiere die Antwort und gib Feedback auf Deutsch.`;
-
-    const userPromptEN = `Category: ${category}
-Question: ${questionText}
-User answer: ${userAnswer}
-
-Previous answers in this session:
-${Object.entries(previousAnswers).map(([k, v]) => `- ${k}: ${v}`).join('\n') || 'No previous answers'}
-
-Analyze the answer and provide feedback in English.`;
-
-    const userPrompt = language === 'en' ? userPromptEN : userPromptDE;
+    const userPrompt = language === 'en'
+      ? `Category: ${category}\nQuestion: ${questionText}\nUser answer: ${userAnswer}\n\nPrevious answers in this session:\n${allAnswersContext}\n\nAnalyze the answer, classify the intake type, and check for initiative matches.`
+      : `Kategorie: ${category}\nFrage: ${questionText}\nBenutzerantwort: ${userAnswer}\n\nBisherige Antworten in dieser Session:\n${allAnswersContext}\n\nAnalysiere die Antwort, klassifiziere den Intake-Typ, und prüfe auf Initiative-Matches.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -144,8 +121,14 @@ Analyze the answer and provide feedback in English.`;
       console.error('AI Gateway error:', response.status, errorText);
       
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
+        return new Response(JSON.stringify({ error: 'Rate limit exceeded.' }), {
           status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'Payment required.' }), {
+          status: 402,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -160,7 +143,7 @@ Analyze the answer and provide feedback in English.`;
       throw new Error('No response from AI');
     }
 
-    console.log('AI validation response:', content);
+    console.log('AI validation response:', content.substring(0, 500));
 
     // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -184,10 +167,132 @@ Analyze the answer and provide feedback in English.`;
       followUpQuestion: null,
       suggestions: [],
       enrichedAnswer: null,
-      missingAspects: []
+      missingAspects: [],
+      complianceFlags: [],
+      classifiedType: null,
+      classificationConfidence: null,
+      classificationReason: null,
+      matchedInitiatives: [],
+      adaptiveQuestions: [],
     }), {
-      status: 200, // Return 200 with fallback to not block the user
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
+
+function buildGermanPrompt(guidelinesContext: string, initiativesContext: string): string {
+  return `Du bist ein erfahrener Solution Architect und Business Analyst, der Software-Anforderungen sammelt.
+Deine Aufgabe ist es, Benutzerantworten zu validieren, den Intake-Typ zu klassifizieren und strategische Matches zu finden.
+WICHTIG: Antworte IMMER auf Deutsch!
+${guidelinesContext}
+${initiativesContext}
+
+Antworte IMMER im folgenden JSON-Format:
+{
+  "isComplete": boolean,
+  "quality": "excellent" | "good" | "needs_improvement" | "insufficient",
+  "followUpQuestion": string | null,
+  "suggestions": string[],
+  "enrichedAnswer": string | null,
+  "missingAspects": string[],
+  "complianceFlags": string[],
+  "classifiedType": "initiative" | "value_stream_epic" | "epic" | "feature" | null,
+  "classificationConfidence": "high" | "medium" | "low" | null,
+  "classificationReason": string | null,
+  "matchedInitiatives": [
+    {
+      "initiative_id": "ID aus der Liste",
+      "initiative_title": "Titel",
+      "match_score": "high" | "medium" | "low",
+      "match_reason": "Warum passt das zusammen?"
+    }
+  ],
+  "adaptiveQuestions": [
+    {
+      "question": "Kontextbezogene Zusatzfrage basierend auf dem Match",
+      "reason": "Warum ist diese Frage wichtig im Kontext der Initiative?"
+    }
+  ]
+}
+
+## Klassifizierungsregeln:
+- **initiative**: Strategische Unternehmensinitiative mit breitem Scope, mehrere Value Streams betroffen, langfristiger Horizont
+- **value_stream_epic**: Großes Vorhaben innerhalb eines Value Streams, mehrere Epics/Features, klar abgrenzbarer Geschäftsbereich
+- **epic**: Abgrenzbares Arbeitspaket mit mehreren Features/User Stories, typisch 1-3 Monate Umsetzungsdauer
+- **feature**: Einzelne Funktionalität oder Verbesserung, typisch in Wochen umsetzbar
+
+Klassifiziere basierend auf: Scope, Anzahl betroffener User/Systeme, Komplexität, Zeithorizont, strategische Bedeutung.
+Aktualisiere die Klassifizierung mit jeder neuen Antwort - sie wird präziser je mehr Kontext du hast.
+
+## Initiative-Matching:
+Prüfe ob die beschriebenen Anforderungen zu bestehenden Initiativen passen. Berücksichtige:
+- Ähnliche Problemstellung oder Ziele
+- Gleicher Value Stream oder Geschäftsbereich
+- Technologische Überschneidungen
+- Thematische Verwandtschaft
+
+## Adaptive Fragen:
+Wenn du einen Initiative-Match findest, generiere 1-2 zusätzliche Fragen die im Kontext der Initiative relevant sind:
+- Abgrenzung zur existierenden Initiative
+- Synergien und Abhängigkeiten
+- Strategische Priorisierung
+
+Sei freundlich aber gründlich.`;
+}
+
+function buildEnglishPrompt(guidelinesContext: string, initiativesContext: string): string {
+  return `You are an experienced Solution Architect and Business Analyst gathering software requirements.
+Your task is to validate user answers, classify the intake type, and find strategic matches.
+IMPORTANT: Always respond in English!
+${guidelinesContext}
+${initiativesContext}
+
+Always respond in the following JSON format:
+{
+  "isComplete": boolean,
+  "quality": "excellent" | "good" | "needs_improvement" | "insufficient",
+  "followUpQuestion": string | null,
+  "suggestions": string[],
+  "enrichedAnswer": string | null,
+  "missingAspects": string[],
+  "complianceFlags": string[],
+  "classifiedType": "initiative" | "value_stream_epic" | "epic" | "feature" | null,
+  "classificationConfidence": "high" | "medium" | "low" | null,
+  "classificationReason": string | null,
+  "matchedInitiatives": [
+    {
+      "initiative_id": "ID from the list",
+      "initiative_title": "Title",
+      "match_score": "high" | "medium" | "low",
+      "match_reason": "Why does this match?"
+    }
+  ],
+  "adaptiveQuestions": [
+    {
+      "question": "Context-aware additional question based on the match",
+      "reason": "Why is this question important in the context of the initiative?"
+    }
+  ]
+}
+
+## Classification rules:
+- **initiative**: Strategic enterprise initiative with broad scope, multiple value streams affected, long-term horizon
+- **value_stream_epic**: Large undertaking within a value stream, multiple epics/features, clearly defined business area
+- **epic**: Bounded work package with multiple features/user stories, typically 1-3 months implementation
+- **feature**: Single functionality or improvement, typically implementable in weeks
+
+Classify based on: scope, number of affected users/systems, complexity, time horizon, strategic importance.
+Update classification with each new answer - it becomes more precise with more context.
+
+## Initiative Matching:
+Check if requirements match existing initiatives. Consider: similar problems/goals, same value stream, technology overlaps, thematic relationships.
+
+## Adaptive Questions:
+When you find an initiative match, generate 1-2 additional questions relevant in the context:
+- Differentiation from existing initiative
+- Synergies and dependencies
+- Strategic prioritization
+
+Be friendly but thorough.`;
+}
