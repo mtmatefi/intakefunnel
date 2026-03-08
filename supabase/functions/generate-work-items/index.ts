@@ -143,7 +143,7 @@ Regeln:
     const specSummary = `
 Problemstellung: ${structuredSpec.problemStatement || "N/A"}
 Ziele: ${(structuredSpec.goals || []).join(", ")}
-Benutzer: ${(structuredSpec.users || []).map((u: any) => \`\${u.persona} (\${u.count})\`).join(", ")}
+Benutzer: ${(structuredSpec.users || []).map((u: any) => `${u.persona} (${u.count})`).join(", ")}
 Integrationen: ${(structuredSpec.integrations || []).map((i: any) => i.system).join(", ")}
 Datenklassifizierung: ${structuredSpec.dataClassification || "N/A"}
 Acceptance Criteria: ${(structuredSpec.acceptanceCriteria || []).map((ac: any) => ac.storyRef + ": " + ac.when).join("; ")}
