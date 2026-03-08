@@ -46,7 +46,11 @@ export function useFetchInnovationsFromSculptor() {
       const { data, error } = await supabase.functions.invoke('fetch-innovations', {
         body: { workspace_id: workspaceId },
       });
-      if (error) throw error;
+      // Silently ignore if Sculptor endpoint not yet available
+      if (error) {
+        console.warn('fetch-innovations not available yet:', error.message);
+        return null;
+      }
       return data;
     },
     onSuccess: () => {
