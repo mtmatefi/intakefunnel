@@ -329,6 +329,12 @@ NFRs: Verfügbarkeit: ${structuredSpec.nfrs?.availability || "N/A"}, Antwortzeit
               item_type: "story",
               title: story.title,
               description: story.description || null,
+              acceptance_criteria: story.acceptance_criteria || [],
+              functional_requirements: story.functional_requirements || [],
+              non_functional_requirements: story.non_functional_requirements || [],
+              story_points: story.story_points || null,
+              priority: story.priority || "medium",
+              definition_of_done: story.definition_of_done || "Code reviewed, Tests bestanden, QA abgenommen",
               status: "draft",
               source_app: "intake_funnel",
             })
