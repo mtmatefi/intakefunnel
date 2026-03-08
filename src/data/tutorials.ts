@@ -4,9 +4,10 @@ export interface TutorialStep {
   id: string;
   title: string;
   description: string;
-  targetSelector?: string; // CSS selector for overlay spotlight
+  targetSelector?: string;
   placement?: "top" | "bottom" | "left" | "right";
-  action?: string; // Optional action hint like "Click here"
+  action?: string;
+  route?: string; // Navigate to this route before highlighting
 }
 
 export interface Tutorial {
