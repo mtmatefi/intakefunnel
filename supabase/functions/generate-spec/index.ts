@@ -171,6 +171,23 @@ function generateRoutingExplanation(path: DeliveryPath, breakdown: ScoreBreakdow
     });
   }
 
+  // Compliance section
+  const compliance = spec.complianceAssessment || [];
+  const applicableCompliance = compliance.filter((c: any) => c.applicable);
+  if (applicableCompliance.length > 0) {
+    explanation += `\n### Compliance Assessment\n\n`;
+    explanation += `| Framework | Guideline | Severity | Status |\n|-----------|-----------|----------|--------|\n`;
+    applicableCompliance.forEach((c: any) => {
+      const statusEmoji = c.status === 'compliant' ? '✅' : c.status === 'partially_compliant' ? '⚠️' : '❌';
+      explanation += `| ${c.framework} | ${c.guidelineName} | ${c.severity} | ${statusEmoji} ${c.status} |\n`;
+    });
+    const actions = applicableCompliance.flatMap((c: any) => c.requiredActions || []);
+    if (actions.length > 0) {
+      explanation += `\n**Erforderliche Maßnahmen:**\n`;
+      actions.forEach((a: string) => { explanation += `- ${a}\n`; });
+    }
+  }
+
   return explanation;
 }
 
