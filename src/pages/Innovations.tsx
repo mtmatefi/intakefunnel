@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { WorkItemDetailView } from "@/components/work-items/WorkItemDetailView";
 import { useInnovations, useInnovationFeedback, useAddInnovationFeedback, useFetchInnovationsFromSculptor } from "@/hooks/useInnovations";
 import { useWorkItemTree, useExportWorkItemsToJira } from "@/hooks/useWorkItems";
 import type { WorkItemTree } from "@/hooks/useWorkItems";
