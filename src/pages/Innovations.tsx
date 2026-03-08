@@ -338,11 +338,27 @@ export default function InnovationsPage() {
   return (
     <AppLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-serif font-bold">Innovationen</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Innovations-Pipeline aus dem Strategy Sculptor – read-only mit Feedback-Möglichkeit
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-serif font-bold">Innovationen</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Innovations-Pipeline aus dem Strategy Sculptor – read-only mit Feedback-Möglichkeit
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={fetchFromSculptor.isPending}
+            onClick={() => {
+              if (workspace?.id) {
+                fetchFromSculptor.mutate(workspace.id, { onSuccess: () => refetch() });
+              }
+            }}
+          >
+            <RefreshCw className={`h-4 w-4 ${fetchFromSculptor.isPending ? "animate-spin" : ""}`} />
+            {fetchFromSculptor.isPending ? "Synchronisiere..." : "Aktualisieren"}
+          </Button>
         </div>
 
         {/* Stage Filter */}
