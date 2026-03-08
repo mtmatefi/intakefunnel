@@ -264,6 +264,14 @@ export default function PoliciesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Version History */}
+      <GuidelineVersionHistory
+        guidelineId={historyGuideline?.id}
+        guidelineName={historyGuideline?.name || ''}
+        open={!!historyGuideline}
+        onOpenChange={(open) => !open && setHistoryGuideline(null)}
+      />
     </AppLayout>
   );
 }
