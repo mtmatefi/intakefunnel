@@ -469,6 +469,42 @@ export type Database = {
           },
         ]
       }
+      interview_rules: {
+        Row: {
+          content_markdown: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          rule_type: string
+          updated_at: string
+        }
+        Insert: {
+          content_markdown: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          rule_type?: string
+          updated_at?: string
+        }
+        Update: {
+          content_markdown?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          rule_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       interview_topics: {
         Row: {
           category: string
