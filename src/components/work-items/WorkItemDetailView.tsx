@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   ChevronDown, ChevronRight, ExternalLink, GitBranch,
   CheckCircle2, ListChecks, ShieldCheck, Gauge, Target, X,
-  Languages, Loader2,
+  Languages, Loader2, Send,
 } from "lucide-react";
 
 const ITEM_TYPE_ICONS: Record<string, string> = { epic: "📦", feature: "✨", story: "📝" };
