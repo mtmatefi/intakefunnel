@@ -18,10 +18,11 @@ import {
   MessageSquare,
   Plus,
   AlertTriangle,
+  Pencil,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import type { GuidelineInsert } from '@/hooks/useGuidelines';
+import type { Guideline, GuidelineInsert } from '@/hooks/useGuidelines';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -41,8 +42,10 @@ interface ParsedGuideline {
 
 interface Props {
   onSave: (data: GuidelineInsert) => void;
+  onUpdate?: (data: Partial<Guideline> & { id: string }) => void;
   userId: string;
   onClose: () => void;
+  editingGuideline?: Guideline | null;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-guideline`;
