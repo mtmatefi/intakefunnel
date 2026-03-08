@@ -116,8 +116,11 @@ function InnovationDetailSheet({
 }) {
   const navigate = useNavigate();
   const { data: feedback = [] } = useInnovationFeedback(innovation?.id);
+  const { tree: workItemTree, items: workItems = [], isLoading: wiLoading } = useWorkItemTree(innovation?.id);
+  const exportToJira = useExportWorkItemsToJira();
   const addFeedback = useAddInnovationFeedback();
   const [comment, setComment] = useState("");
+  const [jiraProjectKey, setJiraProjectKey] = useState("");
 
   // Mark as read when sheet opens
   useEffect(() => {
