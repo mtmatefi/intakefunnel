@@ -499,6 +499,7 @@ function InnovationDetailSheet({
           {showWorkItemDetail && (
             <WorkItemDetailView
               tree={workItemTree}
+              innovationId={innovation.id}
               innovationTitle={innovation.title}
               onClose={() => setShowWorkItemDetail(false)}
             />
