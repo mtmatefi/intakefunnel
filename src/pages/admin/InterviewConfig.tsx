@@ -37,6 +37,13 @@ interface TopicData {
   sample_questions: string[];
 }
 
+interface RuleData {
+  name: string;
+  description: string;
+  rule_type: string;
+  content_markdown: string;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -48,6 +55,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   security: "Security",
   architecture: "Architecture",
   data: "Data & Privacy",
+};
+
+const RULE_TYPE_LABELS: Record<string, string> = {
+  general: "Allgemein",
+  conditional: "Bedingt",
+  mandatory: "Pflicht-Check",
+  quality: "Qualitätssicherung",
 };
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
