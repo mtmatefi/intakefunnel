@@ -12,19 +12,25 @@ export type JiraExport = Tables<'jira_exports'>;
 
 export function useIntakes() {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
 
   return useQuery({
-    queryKey: ['intakes', user?.id],
+    queryKey: ['intakes', user?.id, workspace?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('intakes')
         .select('*')
         .order('updated_at', { ascending: false });
 
+      if (workspace) {
+        query = query.eq('workspace_id', workspace.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Intake[];
     },
-    enabled: !!user,
+    enabled: !!user && !!workspace,
   });
 }
 
