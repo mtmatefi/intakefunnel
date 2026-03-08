@@ -199,7 +199,7 @@ export interface AuditLog {
 // Interview question structure
 export interface InterviewQuestion {
   key: string;
-  category: 'problem' | 'users' | 'data' | 'integrations' | 'ux' | 'nfr';
+  category: 'problem' | 'users' | 'data' | 'integrations' | 'ux' | 'nfr' | 'compliance';
   question: string;
   helpText?: string;
   inputType: 'text' | 'textarea' | 'select' | 'multiselect' | 'number';

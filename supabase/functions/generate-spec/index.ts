@@ -82,6 +82,14 @@ function calculateSecurityRequirements(spec: any): number {
   };
   score += classificationScores[spec.dataClassification as DataClassification] || 0;
   if (spec.nfrs?.auditability) score += 15;
+  
+  // Factor in compliance assessment
+  const compliance = spec.complianceAssessment || [];
+  const criticalCompliance = compliance.filter((c: any) => c.applicable && (c.severity === 'critical' || c.severity === 'high'));
+  score += criticalCompliance.length * 10;
+  const nonCompliant = compliance.filter((c: any) => c.applicable && c.status === 'non_compliant');
+  score += nonCompliant.length * 15;
+  
   return Math.min(score, 100);
 }
 
@@ -163,10 +171,27 @@ function generateRoutingExplanation(path: DeliveryPath, breakdown: ScoreBreakdow
     });
   }
 
+  // Compliance section
+  const compliance = spec.complianceAssessment || [];
+  const applicableCompliance = compliance.filter((c: any) => c.applicable);
+  if (applicableCompliance.length > 0) {
+    explanation += `\n### Compliance Assessment\n\n`;
+    explanation += `| Framework | Guideline | Severity | Status |\n|-----------|-----------|----------|--------|\n`;
+    applicableCompliance.forEach((c: any) => {
+      const statusEmoji = c.status === 'compliant' ? '✅' : c.status === 'partially_compliant' ? '⚠️' : '❌';
+      explanation += `| ${c.framework} | ${c.guidelineName} | ${c.severity} | ${statusEmoji} ${c.status} |\n`;
+    });
+    const actions = applicableCompliance.flatMap((c: any) => c.requiredActions || []);
+    if (actions.length > 0) {
+      explanation += `\n**Erforderliche Maßnahmen:**\n`;
+      actions.forEach((a: string) => { explanation += `- ${a}\n`; });
+    }
+  }
+
   return explanation;
 }
 
-const systemPrompt = `Du bist ein Software-Anforderungsanalyst. Deine Aufgabe ist es, Interview-Transkripte zu analysieren und strukturierte Spezifikationen zu erstellen.
+const baseSystemPrompt = `Du bist ein Software-Anforderungsanalyst mit Expertise in Compliance, Security, Enterprise Architecture und DevOps. Deine Aufgabe ist es, Interview-Transkripte zu analysieren und strukturierte Spezifikationen zu erstellen.
 
 WICHTIG: Alle Ausgaben müssen auf DEUTSCH sein!
 
@@ -191,6 +216,7 @@ Gegeben ein Gesprächstranskript zwischen einem Benutzer und einem KI-Assistente
 17. Risiken - Potenzielle Probleme mit Wahrscheinlichkeit und Auswirkung
 18. Annahmen - Dinge, die als wahr angenommen werden
 19. Offene Fragen - Dinge, die noch geklärt werden müssen
+20. **Compliance-Bewertung** - Welche Compliance-Frameworks sind relevant, welche Guidelines greifen, welche Maßnahmen sind erforderlich
 
 Sei gründlich aber präzise. Konzentriere dich auf umsetzbare, spezifische Details. ALLE AUSGABEN AUF DEUTSCH!`;
 
@@ -238,6 +264,23 @@ serve(async (req) => {
     console.log("Generating spec for intake:", intakeId);
     console.log("Transcript length:", formattedTranscript.length);
 
+    // Fetch active compliance guidelines to inject into spec generation
+    const { data: guidelines } = await supabase
+      .from("guidelines")
+      .select("name, type, compliance_framework, severity, content_markdown, risk_categories")
+      .eq("is_active", true)
+      .order("severity", { ascending: true });
+
+    let guidelinesContext = "";
+    if (guidelines && guidelines.length > 0) {
+      guidelinesContext = `\n\n## AKTIVE COMPLIANCE-GUIDELINES (MÜSSEN BEWERTET WERDEN)\n\nFolgende Guidelines sind im Unternehmen aktiv. Bewerte für jede relevante Guideline, ob sie auf diesen Intake zutrifft und welche Maßnahmen erforderlich sind:\n\n`;
+      for (const g of guidelines) {
+        guidelinesContext += `### [${g.compliance_framework?.toUpperCase()}] ${g.name} (Schweregrad: ${g.severity})\nTyp: ${g.type}\n${g.content_markdown?.substring(0, 500)}...\n\n`;
+      }
+    }
+
+    const systemPrompt = baseSystemPrompt + guidelinesContext;
+
     // Call Lovable AI with tool calling for structured output
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -249,7 +292,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Here is the interview transcript:\n\n${formattedTranscript}\n\nPlease analyze this and generate a structured specification.` },
+          { role: "user", content: `Here is the interview transcript:\n\n${formattedTranscript}\n\nPlease analyze this and generate a structured specification. Include a compliance assessment for all applicable guidelines.` },
         ],
         tools: [
           {
@@ -362,6 +405,23 @@ serve(async (req) => {
                   },
                   assumptions: { type: "array", items: { type: "string" } },
                   openQuestions: { type: "array", items: { type: "string" } },
+                  complianceAssessment: {
+                    type: "array",
+                    description: "Assessment of applicable compliance guidelines",
+                    items: {
+                      type: "object",
+                      properties: {
+                        framework: { type: "string", description: "e.g. ITAR, GDPR, ISO 27001, Enterprise Arch, Security, DevOps" },
+                        guidelineName: { type: "string" },
+                        applicable: { type: "boolean" },
+                        severity: { type: "string", enum: ["critical", "high", "medium", "low"] },
+                        status: { type: "string", enum: ["compliant", "partially_compliant", "non_compliant", "needs_review"] },
+                        requiredActions: { type: "array", items: { type: "string" } },
+                        risks: { type: "array", items: { type: "string" } },
+                      },
+                      required: ["framework", "guidelineName", "applicable", "severity", "status"],
+                    },
+                  },
                 },
                 required: ["problemStatement", "currentProcess", "painPoints", "goals", "users", "dataClassification"],
               },
@@ -770,7 +830,30 @@ function generateMarkdown(spec: any): string {
   }
   
   if (spec.openQuestions?.length) {
-    md += `## Open Questions\n${spec.openQuestions.map((q: string) => `- ${q}`).join("\n")}\n`;
+    md += `## Open Questions\n${spec.openQuestions.map((q: string) => `- ${q}`).join("\n")}\n\n`;
+  }
+  
+  // Compliance Assessment section
+  const compliance = spec.complianceAssessment || [];
+  const applicable = compliance.filter((c: any) => c.applicable);
+  if (applicable.length > 0) {
+    md += `## Compliance Assessment\n\n`;
+    md += `| Framework | Guideline | Schweregrad | Status |\n|-----------|-----------|-------------|--------|\n`;
+    applicable.forEach((c: any) => {
+      const statusIcon = c.status === 'compliant' ? '✅' : c.status === 'partially_compliant' ? '⚠️' : '❌';
+      md += `| ${c.framework} | ${c.guidelineName} | ${c.severity} | ${statusIcon} ${c.status} |\n`;
+    });
+    md += `\n`;
+    
+    const allActions = applicable.flatMap((c: any) => (c.requiredActions || []).map((a: string) => `- [${c.framework}] ${a}`));
+    if (allActions.length > 0) {
+      md += `### Erforderliche Maßnahmen\n${allActions.join("\n")}\n\n`;
+    }
+    
+    const allRisks = applicable.flatMap((c: any) => (c.risks || []).map((r: string) => `- [${c.framework}] ${r}`));
+    if (allRisks.length > 0) {
+      md += `### Compliance-Risiken\n${allRisks.join("\n")}\n\n`;
+    }
   }
   
   return md;

@@ -298,6 +298,7 @@ export const categoryLabels: Record<string, string> = {
   integrations: 'Integrationen',
   ux: 'Benutzeroberfläche',
   nfr: 'Anforderungen',
+  compliance: 'Compliance & Governance',
 };
 
 export const interviewQuestions: InterviewQuestion[] = [
@@ -420,6 +421,39 @@ export const interviewQuestions: InterviewQuestion[] = [
     question: 'When do you need this? What\'s driving the timeline?',
     inputType: 'textarea',
     required: true,
+  },
+  // Compliance & Governance questions
+  {
+    key: 'regulatory_requirements',
+    category: 'compliance',
+    question: 'Are there any regulatory or compliance requirements? (e.g., ITAR, GDPR, Export Control, ISO 27001)',
+    helpText: 'Consider industry regulations, data protection laws, export controls, or security standards that apply',
+    inputType: 'textarea',
+    required: true,
+  },
+  {
+    key: 'architecture_constraints',
+    category: 'compliance',
+    question: 'Are there enterprise architecture standards or technology constraints to follow?',
+    helpText: 'e.g., approved technology stack, cloud-first policy, API standards, deployment requirements',
+    inputType: 'textarea',
+    required: false,
+  },
+  {
+    key: 'security_requirements',
+    category: 'compliance',
+    question: 'What security measures are needed? (Authentication, encryption, audit trail, access control)',
+    helpText: 'Think about who can access what, how data is protected, and what needs to be logged',
+    inputType: 'textarea',
+    required: true,
+  },
+  {
+    key: 'devops_requirements',
+    category: 'compliance',
+    question: 'Are there specific deployment or operational requirements? (CI/CD, monitoring, SLAs)',
+    helpText: 'Consider deployment frequency, uptime requirements, monitoring needs, incident response',
+    inputType: 'textarea',
+    required: false,
   },
 ];
 

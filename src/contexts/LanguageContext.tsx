@@ -66,6 +66,7 @@ const translations: Record<Language, Record<string, string>> = {
     'category.integrations': 'Integrationen',
     'category.ux': 'Benutzeroberfläche',
     'category.nfr': 'Anforderungen',
+    'category.compliance': 'Compliance & Governance',
 
     // Questions
     'q.problem_statement': 'Welches Problem möchten Sie lösen? Beschreiben Sie die Herausforderung in Ihren eigenen Worten.',
@@ -90,6 +91,14 @@ const translations: Record<Language, Record<string, string>> = {
     'q.offline_needed': 'Muss es offline oder bei schlechter Verbindung funktionieren?',
     'q.availability': 'Wann muss dies verfügbar sein?',
     'q.timeline': 'Wann benötigen Sie dies? Was treibt den Zeitplan?',
+    'q.regulatory_requirements': 'Gibt es regulatorische oder Compliance-Anforderungen? (z.B. ITAR, DSGVO, Exportkontrolle, ISO 27001)',
+    'q.regulatory_requirements.help': 'Berücksichtigen Sie Branchenvorschriften, Datenschutzgesetze, Exportkontrollen oder Sicherheitsstandards',
+    'q.architecture_constraints': 'Gibt es Enterprise-Architecture-Standards oder Technologie-Vorgaben zu beachten?',
+    'q.architecture_constraints.help': 'z.B. freigegebener Technologie-Stack, Cloud-First-Policy, API-Standards, Deployment-Anforderungen',
+    'q.security_requirements': 'Welche Sicherheitsmaßnahmen werden benötigt? (Authentifizierung, Verschlüsselung, Audit-Trail, Zugangskontrolle)',
+    'q.security_requirements.help': 'Überlegen Sie, wer worauf zugreifen darf, wie Daten geschützt werden und was protokolliert werden muss',
+    'q.devops_requirements': 'Gibt es spezifische Deployment- oder Betriebsanforderungen? (CI/CD, Monitoring, SLAs)',
+    'q.devops_requirements.help': 'Berücksichtigen Sie Deployment-Häufigkeit, Uptime-Anforderungen, Monitoring-Bedarf, Incident Response',
 
     // Options
     'opt.tech_level.non_tech': 'Nicht-technisch (grundlegende Smartphone-/Computerkenntnisse)',
@@ -176,6 +185,7 @@ const translations: Record<Language, Record<string, string>> = {
     'category.integrations': 'Integrations',
     'category.ux': 'User Interface',
     'category.nfr': 'Requirements',
+    'category.compliance': 'Compliance & Governance',
 
     // Questions
     'q.problem_statement': 'What problem are you trying to solve? Describe the challenge in your own words.',
