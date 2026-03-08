@@ -297,6 +297,7 @@ export function WorkItemDetailView({
 }) {
   const [selected, setSelected] = useState<WorkItemTree | null>(null);
   const translateMutation = useTranslateWorkItems();
+  const publishMutation = usePublishDeliveryPackage();
 
   const allItemIds = flattenTree(tree).map((i) => i.id);
 
