@@ -192,7 +192,7 @@ NFRs: Verfügbarkeit: ${structuredSpec.nfrs?.availability || "N/A"}, Antwortzeit
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: \`Erstelle eine hierarchische Aufgliederung für folgende Spezifikation:\n\n\${specSummary}\` },
+          { role: "user", content: `Erstelle eine hierarchische Aufgliederung für folgende Spezifikation:\n\n${specSummary}` },
         ],
         tools: [
           {
