@@ -515,50 +515,50 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
 
     setIsProcessing(false);
 
-    // Move to next question after a short delay
+    // Move to next unanswered question after a short delay
     setTimeout(() => {
-      if (currentQuestionIndex < categoryQuestions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        // If voice mode, speak next question
+      // Find next unanswered question (skips pre-filled)
+      const findNextUnanswered = (): { cat: string; idx: number } | null => {
+        // First check remaining questions in current category
+        for (let i = currentQuestionIndex + 1; i < categoryQuestions.length; i++) {
+          if (!answers[categoryQuestions[i].key] || categoryQuestions[i].key === currentQuestion?.key) {
+            if (!prefilledAnswers[categoryQuestions[i].key]) return { cat: currentCategory, idx: i };
+          }
+        }
+        // Then check subsequent categories
+        const catIdx = categories.indexOf(currentCategory as typeof categories[number]);
+        for (let c = catIdx + 1; c < categories.length; c++) {
+          const catQs = interviewQuestions.filter(q => q.category === categories[c]);
+          for (let i = 0; i < catQs.length; i++) {
+            if (!answers[catQs[i].key] && !prefilledAnswers[catQs[i].key]) return { cat: categories[c], idx: i };
+          }
+        }
+        return null;
+      };
+
+      const next = findNextUnanswered();
+      if (next) {
+        setCurrentCategory(next.cat);
+        setCurrentQuestionIndex(next.idx);
         if (voiceAssistant.state !== 'idle') {
-          const nextQ = categoryQuestions[currentQuestionIndex + 1];
+          const nextCatQs = interviewQuestions.filter(q => q.category === next.cat);
+          const nextQ = nextCatQs[next.idx];
           if (nextQ) {
-            setTimeout(() => {
-              voiceAssistant.startWithQuestion(getQuestionText(nextQ));
-            }, 500);
+            setTimeout(() => voiceAssistant.startWithQuestion(getQuestionText(nextQ)), 500);
           }
         }
       } else {
-        // Move to next category
-        const categoryIndex = categories.indexOf(currentCategory as typeof categories[number]);
-        if (categoryIndex < categories.length - 1) {
-          setCurrentCategory(categories[categoryIndex + 1]);
-          setCurrentQuestionIndex(0);
-          // If voice mode, speak next category intro
-          if (voiceAssistant.state !== 'idle') {
-            setTimeout(() => {
-              const nextCat = categories[categoryIndex + 1];
-              const nextCatQuestions = interviewQuestions.filter(q => q.category === nextCat);
-              if (nextCatQuestions[0]) {
-                const intro = t('wizard.categoryIntro').replace('{category}', getCategoryLabel(nextCat).toLowerCase());
-                voiceAssistant.startWithQuestion(`${intro} ${getQuestionText(nextCatQuestions[0])}`);
-              }
-            }, 500);
-          }
-        } else {
-          // All done - show completion message
-          const doneMessage = `✅ ${t('wizard.allDone')}`;
-          setTranscript(prev => [...prev, {
-            id: `msg-${Date.now()}`,
-            intakeId: 'new',
-            speaker: 'assistant',
-            message: doneMessage,
-            timestamp: new Date().toISOString(),
-          }]);
-          // Stop voice assistant
-          if (voiceAssistant.state !== 'idle') {
-            voiceAssistant.stopAssistant();
-          }
+        // All done
+        const doneMessage = `✅ ${t('wizard.allDone')}`;
+        setTranscript(prev => [...prev, {
+          id: `msg-${Date.now()}`,
+          intakeId: 'new',
+          speaker: 'assistant',
+          message: doneMessage,
+          timestamp: new Date().toISOString(),
+        }]);
+        if (voiceAssistant.state !== 'idle') {
+          voiceAssistant.stopAssistant();
         }
       }
     }, 800);
