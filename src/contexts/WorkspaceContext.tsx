@@ -128,6 +128,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [loadWorkspaces]);
 
+  const notifySculptorWorkspaceEvent = useCallback(async (workspaceId: string, action: "trashed" | "deleted" | "restored") => {
+    try {
+      await supabase.functions.invoke("workspace-event", {
+        body: { workspace_id: workspaceId, action },
+      });
+    } catch (err) {
+      console.error("Sculptor notification failed (non-blocking):", err);
+    }
+  }, []);
+
   const moveToTrash = useCallback(async (workspaceId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -140,12 +150,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(WS_STORAGE_KEY);
       }
       await loadWorkspaces();
+      // Notify Sculptor (non-blocking)
+      notifySculptorWorkspaceEvent(workspaceId, "trashed");
       return true;
     } catch (err) {
       console.error("Move to trash failed:", err);
       return false;
     }
-  }, [loadWorkspaces, workspace]);
+  }, [loadWorkspaces, workspace, notifySculptorWorkspaceEvent]);
 
   const restoreFromTrash = useCallback(async (workspaceId: string): Promise<boolean> => {
     try {
