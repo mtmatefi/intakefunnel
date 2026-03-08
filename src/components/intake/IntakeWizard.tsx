@@ -45,6 +45,18 @@ import {
 
 const categories = ['problem', 'users', 'data', 'integrations', 'ux', 'nfr', 'compliance'] as const;
 
+interface MatchedInitiative {
+  initiative_id: string;
+  initiative_title: string;
+  match_score: 'high' | 'medium' | 'low';
+  match_reason: string;
+}
+
+interface AdaptiveQuestion {
+  question: string;
+  reason: string;
+}
+
 interface AIValidation {
   isComplete: boolean;
   quality: 'excellent' | 'good' | 'needs_improvement' | 'insufficient';
@@ -52,7 +64,15 @@ interface AIValidation {
   suggestions: string[];
   enrichedAnswer: string | null;
   missingAspects: string[];
+  complianceFlags?: string[];
+  classifiedType: 'initiative' | 'value_stream_epic' | 'epic' | 'feature' | null;
+  classificationConfidence: 'high' | 'medium' | 'low' | null;
+  classificationReason: string | null;
+  matchedInitiatives: MatchedInitiative[];
+  adaptiveQuestions: AdaptiveQuestion[];
 }
+
+type IntakeClassification = 'initiative' | 'value_stream_epic' | 'epic' | 'feature' | null;
 
 export function IntakeWizard() {
   const navigate = useNavigate();
