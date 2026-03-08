@@ -104,6 +104,13 @@ export function IntakeWizard() {
   const [pendingFollowUp, setPendingFollowUp] = useState<string | null>(null);
   const [currentValidation, setCurrentValidation] = useState<AIValidation | null>(null);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [classification, setClassification] = useState<IntakeClassification>(null);
+  const [classificationConfidence, setClassificationConfidence] = useState<string | null>(null);
+  const [classificationReason, setClassificationReason] = useState<string | null>(null);
+  const [matchedInitiatives, setMatchedInitiatives] = useState<MatchedInitiative[]>([]);
+  const [confirmedInitiatives, setConfirmedInitiatives] = useState<MatchedInitiative[]>([]);
+  const [pendingAdaptiveQuestions, setPendingAdaptiveQuestions] = useState<AdaptiveQuestion[]>([]);
+  const [userClassificationOverride, setUserClassificationOverride] = useState<IntakeClassification>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasRestoredRef = useRef(false);
 
