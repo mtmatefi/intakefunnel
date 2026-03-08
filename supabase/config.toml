@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.generate-work-items]
 verify_jwt = false
+
+[functions.translate-work-items]
+verify_jwt = false
