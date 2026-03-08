@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.sync-to-sculptor]
 verify_jwt = false
+
+[functions.sync-innovations]
+verify_jwt = false
