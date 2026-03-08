@@ -19,6 +19,7 @@ import InterviewConfigPage from "./pages/admin/InterviewConfig";
 import UserManagementPage from "./pages/admin/UserManagement";
 import ProfilePage from "./pages/Profile";
 import SettingsPage from "./pages/Settings";
+import TutorialsPage from "./pages/Tutorials";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ function AppRoutes() {
       <Route path="/admin/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/tutorials" element={<ProtectedRoute><TutorialsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

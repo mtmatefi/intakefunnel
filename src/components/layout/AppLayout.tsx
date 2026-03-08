@@ -26,6 +26,7 @@ import {
   UserCog,
   X,
   BarChart3,
+  GraduationCap,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
@@ -44,6 +45,7 @@ const navigation = [
   { name: "Compliance", href: "/admin/policies", icon: Shield, roles: ["admin", "architect"] },
   { name: "Integrations", href: "/admin/integrations", icon: Settings, roles: ["admin"] },
   { name: "Benutzer", href: "/admin/users", icon: UserCog, roles: ["admin"] },
+  { name: "Tutorials", href: "/tutorials", icon: GraduationCap, roles: ["requester", "architect", "engineer_lead", "admin"] },
 ];
 
 const roleLabels: Record<UserRole, string> = {
