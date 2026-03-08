@@ -40,16 +40,15 @@ export function useGuidelines(framework?: string) {
   return useQuery({
     queryKey: ['guidelines', framework],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('guidelines')
         .select('*')
         .order('updated_at', { ascending: false });
-      
+      if (error) throw error;
+      let results = (data || []) as unknown as Guideline[];
       if (framework && framework !== 'all') {
-        query = query.eq('compliance_framework' as any, framework);
+        results = results.filter((g) => g.compliance_framework === framework);
       }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as unknown as Guideline[];
     },
