@@ -491,7 +491,7 @@ export function GuidelineChatCreator({ onSave, onUpdate, userId, onClose, editin
               {parsedGuideline?.name && (
                 <Button size="sm" onClick={handleSaveGuideline} className="gap-1.5">
                   <Check className="h-3.5 w-3.5" />
-                  Speichern
+                  {isEditing ? 'Aktualisieren' : 'Speichern'}
                 </Button>
               )}
             </div>

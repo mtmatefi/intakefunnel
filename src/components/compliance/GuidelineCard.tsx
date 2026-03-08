@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Pencil, Trash2, Link2, Clock, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Link2, Clock, AlertTriangle, MessageSquare } from 'lucide-react';
 import type { Guideline } from '@/hooks/useGuidelines';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
