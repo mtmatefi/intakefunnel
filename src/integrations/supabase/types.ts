@@ -383,29 +383,35 @@ export type Database = {
       }
       innovation_feedback: {
         Row: {
+          author_name: string | null
           comment: string
           created_at: string
           feedback_type: string
           id: string
           innovation_id: string
+          source_app: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          author_name?: string | null
           comment: string
           created_at?: string
           feedback_type?: string
           id?: string
           innovation_id: string
+          source_app?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          author_name?: string | null
           comment?: string
           created_at?: string
           feedback_type?: string
           id?: string
           innovation_id?: string
+          source_app?: string
           updated_at?: string
           user_id?: string
         }
