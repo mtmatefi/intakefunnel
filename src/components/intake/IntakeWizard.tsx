@@ -81,7 +81,60 @@ interface AIValidation {
 
 type IntakeClassification = 'initiative' | 'value_stream_epic' | 'epic' | 'feature' | null;
 
-export function IntakeWizard() {
+interface InnovationContext {
+  id: string;
+  externalId: string;
+  title: string;
+  description?: string;
+  hypothesis?: string;
+  valueProposition?: string;
+  expectedOutcome?: string;
+  effortEstimate?: string;
+  responsible?: string;
+  learnings?: string;
+  targetDate?: string;
+  impactData?: any[];
+  riskData?: any[];
+  trendData?: any[];
+}
+
+function buildPrefilledAnswers(ctx: InnovationContext): Record<string, string> {
+  const prefilled: Record<string, string> = {};
+  
+  // problem_statement: combine description + hypothesis
+  const parts: string[] = [];
+  if (ctx.description) parts.push(ctx.description);
+  if (ctx.hypothesis) parts.push(`Hypothese: ${ctx.hypothesis}`);
+  if (parts.length > 0) prefilled['problem_statement'] = parts.join('\n\n');
+  
+  // goals: expected outcome + value proposition
+  const goalParts: string[] = [];
+  if (ctx.expectedOutcome) goalParts.push(ctx.expectedOutcome);
+  if (ctx.valueProposition) goalParts.push(`Value Proposition: ${ctx.valueProposition}`);
+  if (goalParts.length > 0) prefilled['goals'] = goalParts.join('\n\n');
+  
+  // pain_points from learnings
+  if (ctx.learnings) prefilled['pain_points'] = ctx.learnings;
+  
+  // users_primary from responsible
+  if (ctx.responsible) prefilled['users_primary'] = `Verantwortlich: ${ctx.responsible}`;
+  
+  // timeline from target date + effort
+  const timeParts: string[] = [];
+  if (ctx.targetDate) timeParts.push(`Zieldatum: ${new Date(ctx.targetDate).toLocaleDateString('de-DE')}`);
+  if (ctx.effortEstimate) timeParts.push(`Geschätzter Aufwand: ${ctx.effortEstimate}`);
+  if (timeParts.length > 0) prefilled['timeline'] = timeParts.join('\n');
+  
+  // risks → regulatory_requirements
+  if (ctx.riskData && ctx.riskData.length > 0) {
+    prefilled['regulatory_requirements'] = 'Identifizierte Risiken aus Innovation:\n' + 
+      ctx.riskData.map((r: any) => `- ${r.title || r.name}: ${r.description || ''}`).join('\n');
+  }
+  
+  return prefilled;
+}
+
+export function IntakeWizard({ innovationContext }: { innovationContext?: InnovationContext | null }) {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { user } = useAuth();
@@ -93,9 +146,12 @@ export function IntakeWizard() {
   const generateSpec = useGenerateSpec();
   const [isSaving, setIsSaving] = useState(false);
   
+  // Pre-fill from innovation context
+  const prefilledAnswers = innovationContext ? buildPrefilledAnswers(innovationContext) : {};
+  
   const [currentCategory, setCurrentCategory] = useState<string>('problem');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(prefilledAnswers);
   const [enrichedAnswers, setEnrichedAnswers] = useState<Record<string, string>>({});
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -111,6 +167,7 @@ export function IntakeWizard() {
   const [confirmedInitiatives, setConfirmedInitiatives] = useState<MatchedInitiative[]>([]);
   const [pendingAdaptiveQuestions, setPendingAdaptiveQuestions] = useState<AdaptiveQuestion[]>([]);
   const [userClassificationOverride, setUserClassificationOverride] = useState<IntakeClassification>(null);
+  const [innovationPrefillShown, setInnovationPrefillShown] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasRestoredRef = useRef(false);
 
@@ -157,12 +214,54 @@ export function IntakeWizard() {
     return t(`category.${cat}`);
   };
 
-  // Check for saved state on mount
+  // Skip to the first unanswered question
+  const skipToFirstUnanswered = () => {
+    for (const cat of categories) {
+      const catQs = interviewQuestions.filter(q => q.category === cat);
+      const firstUnansweredIdx = catQs.findIndex(q => !answers[q.key]);
+      if (firstUnansweredIdx >= 0) {
+        setCurrentCategory(cat);
+        setCurrentQuestionIndex(firstUnansweredIdx);
+        return;
+      }
+    }
+  };
+
+
   useEffect(() => {
-    if (!hasRestoredRef.current && hasSavedState()) {
+    if (!innovationContext && !hasRestoredRef.current && hasSavedState()) {
       setShowRestoreDialog(true);
     }
   }, [hasSavedState]);
+
+  // Show innovation prefill summary on mount
+  useEffect(() => {
+    if (innovationContext && !innovationPrefillShown) {
+      setInnovationPrefillShown(true);
+      const prefilledKeys = Object.keys(prefilledAnswers);
+      const allKeys = interviewQuestions.map(q => q.key);
+      const remainingKeys = allKeys.filter(k => !prefilledKeys.includes(k));
+      
+      let summaryMsg = `🚀 **Innovation-Daten übernommen: "${innovationContext.title}"**\n\n`;
+      summaryMsg += `✅ **${prefilledKeys.length} Fragen** wurden automatisch aus der Innovation beantwortet:\n`;
+      for (const key of prefilledKeys) {
+        const q = interviewQuestions.find(iq => iq.key === key);
+        if (q) summaryMsg += `- ${q.question.substring(0, 60)}...\n`;
+      }
+      summaryMsg += `\n📋 **${remainingKeys.length} offene Fragen** verbleiben. Lass uns diese durchgehen!`;
+
+      setTranscript([{
+        id: `msg-innovation-prefill`,
+        intakeId: 'new',
+        speaker: 'assistant',
+        message: summaryMsg,
+        timestamp: new Date().toISOString(),
+      }]);
+
+      // Skip to first unanswered question
+      skipToFirstUnanswered();
+    }
+  }, [innovationContext, innovationPrefillShown]);
 
   // Auto-save after each change
   useEffect(() => {
@@ -416,50 +515,50 @@ export function IntakeWizard() {
 
     setIsProcessing(false);
 
-    // Move to next question after a short delay
+    // Move to next unanswered question after a short delay
     setTimeout(() => {
-      if (currentQuestionIndex < categoryQuestions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        // If voice mode, speak next question
+      // Find next unanswered question (skips pre-filled)
+      const findNextUnanswered = (): { cat: string; idx: number } | null => {
+        // First check remaining questions in current category
+        for (let i = currentQuestionIndex + 1; i < categoryQuestions.length; i++) {
+          if (!answers[categoryQuestions[i].key] || categoryQuestions[i].key === currentQuestion?.key) {
+            if (!prefilledAnswers[categoryQuestions[i].key]) return { cat: currentCategory, idx: i };
+          }
+        }
+        // Then check subsequent categories
+        const catIdx = categories.indexOf(currentCategory as typeof categories[number]);
+        for (let c = catIdx + 1; c < categories.length; c++) {
+          const catQs = interviewQuestions.filter(q => q.category === categories[c]);
+          for (let i = 0; i < catQs.length; i++) {
+            if (!answers[catQs[i].key] && !prefilledAnswers[catQs[i].key]) return { cat: categories[c], idx: i };
+          }
+        }
+        return null;
+      };
+
+      const next = findNextUnanswered();
+      if (next) {
+        setCurrentCategory(next.cat);
+        setCurrentQuestionIndex(next.idx);
         if (voiceAssistant.state !== 'idle') {
-          const nextQ = categoryQuestions[currentQuestionIndex + 1];
+          const nextCatQs = interviewQuestions.filter(q => q.category === next.cat);
+          const nextQ = nextCatQs[next.idx];
           if (nextQ) {
-            setTimeout(() => {
-              voiceAssistant.startWithQuestion(getQuestionText(nextQ));
-            }, 500);
+            setTimeout(() => voiceAssistant.startWithQuestion(getQuestionText(nextQ)), 500);
           }
         }
       } else {
-        // Move to next category
-        const categoryIndex = categories.indexOf(currentCategory as typeof categories[number]);
-        if (categoryIndex < categories.length - 1) {
-          setCurrentCategory(categories[categoryIndex + 1]);
-          setCurrentQuestionIndex(0);
-          // If voice mode, speak next category intro
-          if (voiceAssistant.state !== 'idle') {
-            setTimeout(() => {
-              const nextCat = categories[categoryIndex + 1];
-              const nextCatQuestions = interviewQuestions.filter(q => q.category === nextCat);
-              if (nextCatQuestions[0]) {
-                const intro = t('wizard.categoryIntro').replace('{category}', getCategoryLabel(nextCat).toLowerCase());
-                voiceAssistant.startWithQuestion(`${intro} ${getQuestionText(nextCatQuestions[0])}`);
-              }
-            }, 500);
-          }
-        } else {
-          // All done - show completion message
-          const doneMessage = `✅ ${t('wizard.allDone')}`;
-          setTranscript(prev => [...prev, {
-            id: `msg-${Date.now()}`,
-            intakeId: 'new',
-            speaker: 'assistant',
-            message: doneMessage,
-            timestamp: new Date().toISOString(),
-          }]);
-          // Stop voice assistant
-          if (voiceAssistant.state !== 'idle') {
-            voiceAssistant.stopAssistant();
-          }
+        // All done
+        const doneMessage = `✅ ${t('wizard.allDone')}`;
+        setTranscript(prev => [...prev, {
+          id: `msg-${Date.now()}`,
+          intakeId: 'new',
+          speaker: 'assistant',
+          message: doneMessage,
+          timestamp: new Date().toISOString(),
+        }]);
+        if (voiceAssistant.state !== 'idle') {
+          voiceAssistant.stopAssistant();
         }
       }
     }, 800);
@@ -529,8 +628,9 @@ export function IntakeWizard() {
       // Step 1: Create intake record
       toast.loading(language === 'de' ? 'Speichere Interview...' : 'Saving interview...', { id: 'gen-spec' });
       
-      // Generate title from first answer or problem statement
-      const title = answers['problem_statement']?.substring(0, 100) || 
+      // Generate title from innovation or first answer
+      const title = innovationContext?.title ||
+                    answers['problem_statement']?.substring(0, 100) || 
                     answers['current_process']?.substring(0, 100) ||
                     `Intake ${new Date().toLocaleDateString()}`;
       
