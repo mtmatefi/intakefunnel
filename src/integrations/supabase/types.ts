@@ -456,10 +456,13 @@ export type Database = {
       }
       innovation_work_items: {
         Row: {
+          acceptance_criteria: string[] | null
           assignee: string | null
           created_at: string
+          definition_of_done: string | null
           description: string | null
           external_id: string
+          functional_requirements: string[] | null
           id: string
           innovation_id: string
           item_type: Database["public"]["Enums"]["work_item_type"]
@@ -467,18 +470,24 @@ export type Database = {
           jira_issue_key: string | null
           jira_issue_url: string | null
           jira_status: string | null
+          non_functional_requirements: string[] | null
           parent_id: string | null
+          priority: string | null
           source_app: string
           status: string
+          story_points: number | null
           synced_at: string
           title: string
           updated_at: string
         }
         Insert: {
+          acceptance_criteria?: string[] | null
           assignee?: string | null
           created_at?: string
+          definition_of_done?: string | null
           description?: string | null
           external_id: string
+          functional_requirements?: string[] | null
           id?: string
           innovation_id: string
           item_type: Database["public"]["Enums"]["work_item_type"]
@@ -486,18 +495,24 @@ export type Database = {
           jira_issue_key?: string | null
           jira_issue_url?: string | null
           jira_status?: string | null
+          non_functional_requirements?: string[] | null
           parent_id?: string | null
+          priority?: string | null
           source_app?: string
           status?: string
+          story_points?: number | null
           synced_at?: string
           title: string
           updated_at?: string
         }
         Update: {
+          acceptance_criteria?: string[] | null
           assignee?: string | null
           created_at?: string
+          definition_of_done?: string | null
           description?: string | null
           external_id?: string
+          functional_requirements?: string[] | null
           id?: string
           innovation_id?: string
           item_type?: Database["public"]["Enums"]["work_item_type"]
@@ -505,9 +520,12 @@ export type Database = {
           jira_issue_key?: string | null
           jira_issue_url?: string | null
           jira_status?: string | null
+          non_functional_requirements?: string[] | null
           parent_id?: string | null
+          priority?: string | null
           source_app?: string
           status?: string
+          story_points?: number | null
           synced_at?: string
           title?: string
           updated_at?: string
