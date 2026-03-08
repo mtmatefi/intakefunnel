@@ -30,11 +30,12 @@ const frameworkLabels: Record<string, string> = {
 interface Props {
   guideline: Guideline;
   onEdit: (g: Guideline) => void;
+  onChatEdit?: (g: Guideline) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, active: boolean) => void;
 }
 
-export function GuidelineCard({ guideline, onEdit, onDelete, onToggleActive }: Props) {
+export function GuidelineCard({ guideline, onEdit, onChatEdit, onDelete, onToggleActive }: Props) {
   const isOverdue = guideline.last_reviewed_at
     ? new Date().getTime() - new Date(guideline.last_reviewed_at).getTime() >
       guideline.review_frequency_days * 86400000
