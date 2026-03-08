@@ -84,6 +84,34 @@ export function GuidelineChatCreator({ onSave, onUpdate, userId, onClose, editin
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isEditing = !!existingGuideline;
+  const initRef = useRef(false);
+
+  // Initialize editing mode with existing guideline context
+  useEffect(() => {
+    if (existingGuideline && !initRef.current) {
+      initRef.current = true;
+      const guidelineJson: ParsedGuideline = {
+        name: existingGuideline.name,
+        description: existingGuideline.description || undefined,
+        type: existingGuideline.type,
+        compliance_framework: existingGuideline.compliance_framework,
+        severity: existingGuideline.severity,
+        risk_categories: existingGuideline.risk_categories || [],
+        review_frequency_days: existingGuideline.review_frequency_days,
+        content_markdown: existingGuideline.content_markdown,
+      };
+      setParsedGuideline(guidelineJson);
+
+      // Seed the chat with the existing guideline as assistant context
+      const contextMsg: ChatMessage = {
+        role: 'assistant',
+        content: `Ich habe die bestehende Guideline **"${existingGuideline.name}"** geladen. Du kannst sie jetzt per Chat überarbeiten.\n\nSag mir z.B.:\n- "Erweitere den Security-Abschnitt"\n- "Füge OWASP Top 10 Referenzen hinzu"\n- "Ändere den Schweregrad auf kritisch"\n- "Ergänze Risikokategorien für Cloud Security"\n\n\`\`\`guideline-json\n${JSON.stringify(guidelineJson, null, 2)}\n\`\`\``,
+      };
+      setMessages([contextMsg]);
+    }
+  }, [existingGuideline]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
