@@ -39,6 +39,16 @@ function LoadingScreen() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { workspace, loading: wsLoading } = useWorkspace();
+  if (isLoading || wsLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // If no workspace selected, redirect to workspace selector
+  if (!workspace) return <Navigate to="/workspace" replace />;
+  return <>{children}</>;
+}
+
+function WorkspaceRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
