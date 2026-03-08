@@ -102,6 +102,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <AuthProvider>
+        <WorkspaceProvider>
         <TutorialProvider>
           <TooltipProvider>
             <Toaster />
