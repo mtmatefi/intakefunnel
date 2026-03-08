@@ -110,16 +110,95 @@ const JIRA_STATUS_COLORS: Record<string, string> = {
   "In Progress": "bg-primary/20 text-primary",
   "Done": "bg-emerald-500/20 text-emerald-400",
 };
+const PRIORITY_COLORS: Record<string, string> = {
+  high: "bg-destructive/20 text-destructive",
+  medium: "bg-amber-500/20 text-amber-400",
+  low: "bg-muted text-muted-foreground",
+};
+
+function WorkItemDetail({ item }: { item: WorkItemTree }) {
+  const hasAC = item.acceptance_criteria && item.acceptance_criteria.length > 0;
+  const hasFR = item.functional_requirements && item.functional_requirements.length > 0;
+  const hasNFR = item.non_functional_requirements && item.non_functional_requirements.length > 0;
+  const hasDetails = item.description || hasAC || hasFR || hasNFR || item.definition_of_done;
+
+  if (!hasDetails) return null;
+
+  return (
+    <div className="px-3 pb-3 pt-1 space-y-2 text-xs text-muted-foreground">
+      {item.description && (
+        <div>
+          <span className="font-medium text-foreground/80">Beschreibung:</span>
+          <p className="mt-0.5 whitespace-pre-wrap">{item.description}</p>
+        </div>
+      )}
+      {hasAC && (
+        <div>
+          <span className="font-medium text-foreground/80">Acceptance Criteria:</span>
+          <ul className="mt-0.5 list-disc list-inside space-y-0.5">
+            {item.acceptance_criteria!.map((ac, i) => <li key={i}>{ac}</li>)}
+          </ul>
+        </div>
+      )}
+      {hasFR && (
+        <div>
+          <span className="font-medium text-foreground/80">Funktionale Anforderungen:</span>
+          <ul className="mt-0.5 list-disc list-inside space-y-0.5">
+            {item.functional_requirements!.map((fr, i) => <li key={i}>{fr}</li>)}
+          </ul>
+        </div>
+      )}
+      {hasNFR && (
+        <div>
+          <span className="font-medium text-foreground/80">Nicht-funktionale Anforderungen:</span>
+          <ul className="mt-0.5 list-disc list-inside space-y-0.5">
+            {item.non_functional_requirements!.map((nfr, i) => <li key={i}>{nfr}</li>)}
+          </ul>
+        </div>
+      )}
+      {item.definition_of_done && (
+        <div>
+          <span className="font-medium text-foreground/80">Definition of Done:</span>
+          <p className="mt-0.5">{item.definition_of_done}</p>
+        </div>
+      )}
+      <div className="flex gap-2 flex-wrap pt-1">
+        {item.priority && (
+          <Badge variant="secondary" className={cn("text-[9px] h-4 px-1.5", PRIORITY_COLORS[item.priority] || "")}>
+            {item.priority}
+          </Badge>
+        )}
+        {item.story_points != null && (
+          <Badge variant="outline" className="text-[9px] h-4 px-1.5">
+            {item.story_points} SP
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function WorkItemNode({ item, depth = 0 }: { item: WorkItemTree; depth?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasDetails = item.description || 
+    (item.acceptance_criteria && item.acceptance_criteria.length > 0) ||
+    (item.functional_requirements && item.functional_requirements.length > 0) ||
+    (item.non_functional_requirements && item.non_functional_requirements.length > 0) ||
+    item.definition_of_done;
+
   return (
     <div>
       <div
         className={cn(
-          "flex items-center gap-2 py-1.5 px-2 rounded text-sm hover:bg-secondary/40 transition-colors",
+          "flex items-center gap-2 py-1.5 px-2 rounded text-sm hover:bg-secondary/40 transition-colors cursor-pointer",
+          expanded && "bg-secondary/20",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        onClick={() => hasDetails && setExpanded(!expanded)}
       >
+        {hasDetails && (
+          <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", expanded ? "" : "-rotate-90")} />
+        )}
         <span className="text-xs">{ITEM_TYPE_ICONS[item.item_type] || "📋"}</span>
         <span className="flex-1 truncate">{item.title}</span>
         {item.jira_issue_key ? (
@@ -144,6 +223,7 @@ function WorkItemNode({ item, depth = 0 }: { item: WorkItemTree; depth?: number 
           </Badge>
         )}
       </div>
+      {expanded && <WorkItemDetail item={item} />}
       {item.children.length > 0 && (
         <div className="border-l border-border/30 ml-4">
           {item.children.map((child) => (
