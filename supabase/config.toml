@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.get-work-items]
 verify_jwt = false
+
+[functions.notify-work-items]
+verify_jwt = false
