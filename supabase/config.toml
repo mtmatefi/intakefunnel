@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.coach-interview]
 verify_jwt = false
+
+[functions.coach-interview-rules]
+verify_jwt = false
