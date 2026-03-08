@@ -123,6 +123,84 @@ export type Database = {
           },
         ]
       }
+      guideline_versions: {
+        Row: {
+          change_reason: string
+          change_source: string
+          changed_at: string
+          changed_by: string
+          changed_fields: string[] | null
+          compliance_framework: string | null
+          content_markdown: string
+          description: string | null
+          guideline_id: string
+          id: string
+          intake_id: string | null
+          name: string
+          previous_values: Json | null
+          review_frequency_days: number | null
+          risk_categories: string[] | null
+          severity: string | null
+          type: string
+          version_number: number
+        }
+        Insert: {
+          change_reason: string
+          change_source?: string
+          changed_at?: string
+          changed_by: string
+          changed_fields?: string[] | null
+          compliance_framework?: string | null
+          content_markdown: string
+          description?: string | null
+          guideline_id: string
+          id?: string
+          intake_id?: string | null
+          name: string
+          previous_values?: Json | null
+          review_frequency_days?: number | null
+          risk_categories?: string[] | null
+          severity?: string | null
+          type: string
+          version_number?: number
+        }
+        Update: {
+          change_reason?: string
+          change_source?: string
+          changed_at?: string
+          changed_by?: string
+          changed_fields?: string[] | null
+          compliance_framework?: string | null
+          content_markdown?: string
+          description?: string | null
+          guideline_id?: string
+          id?: string
+          intake_id?: string | null
+          name?: string
+          previous_values?: Json | null
+          review_frequency_days?: number | null
+          risk_categories?: string[] | null
+          severity?: string | null
+          type?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guideline_versions_guideline_id_fkey"
+            columns: ["guideline_id"]
+            isOneToOne: false
+            referencedRelation: "guidelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guideline_versions_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: false
+            referencedRelation: "intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guidelines: {
         Row: {
           applicability_conditions: Json | null
