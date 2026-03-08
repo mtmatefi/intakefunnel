@@ -215,6 +215,7 @@ export default function PoliciesPage() {
                   key={g.id}
                   guideline={g}
                   onEdit={(g) => { setEditingGuideline(g); setEditorOpen(true); }}
+                  onChatEdit={(g) => { setChatEditGuideline(g); }}
                   onDelete={setDeleteId}
                   onToggleActive={handleToggleActive}
                 />
