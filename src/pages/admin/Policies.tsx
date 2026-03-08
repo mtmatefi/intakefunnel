@@ -227,6 +227,7 @@ export default function PoliciesPage() {
                   guideline={g}
                   onEdit={(g) => { setEditingGuideline(g); setEditorOpen(true); }}
                   onChatEdit={(g) => { setChatEditGuideline(g); }}
+                  onShowHistory={(g) => { setHistoryGuideline(g); }}
                   onDelete={setDeleteId}
                   onToggleActive={handleToggleActive}
                 />
