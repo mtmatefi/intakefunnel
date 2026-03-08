@@ -103,6 +103,11 @@ export function GuidelineCard({ guideline, onEdit, onChatEdit, onShowHistory, on
         </div>
 
         <div className="flex justify-end gap-2 mt-3">
+          {onShowHistory && (
+            <Button variant="ghost" size="sm" onClick={() => onShowHistory(guideline)}>
+              <History className="h-3.5 w-3.5 mr-1" /> Historie
+            </Button>
+          )}
           {onChatEdit && (
             <Button variant="ghost" size="sm" onClick={() => onChatEdit(guideline)}>
               <MessageSquare className="h-3.5 w-3.5 mr-1" /> Chat-Edit
