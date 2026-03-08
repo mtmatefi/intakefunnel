@@ -2,7 +2,6 @@ import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +9,6 @@ import { GraduationCap, RotateCcw } from "lucide-react";
 import { getTutorialsForRole, type Tutorial } from "@/data/tutorials";
 import { TutorialCard } from "@/components/tutorial/TutorialCard";
 import { TutorialReadingView } from "@/components/tutorial/TutorialReadingView";
-import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { useTutorial } from "@/hooks/useTutorial";
 
 const categoryLabels: Record<string, string> = {
@@ -26,12 +24,7 @@ export default function TutorialsPage() {
     isTutorialCompleted,
     completeTutorial,
     resetProgress,
-    overlayTutorial,
-    overlayStepIndex,
     startOverlayTutorial,
-    nextOverlayStep,
-    prevOverlayStep,
-    closeOverlay,
   } = useTutorial();
 
   const [readingTutorial, setReadingTutorial] = useState<Tutorial | null>(null);
@@ -41,8 +34,6 @@ export default function TutorialsPage() {
   const roleTutorials = getTutorialsForRole(user.role);
   const completedCount = roleTutorials.filter((t) => isTutorialCompleted(t.id)).length;
   const progressPct = roleTutorials.length > 0 ? (completedCount / roleTutorials.length) * 100 : 0;
-
-  // Group by category
   const categories = [...new Set(roleTutorials.map((t) => t.category))];
 
   if (readingTutorial) {
@@ -60,15 +51,6 @@ export default function TutorialsPage() {
             onMarkComplete={completeTutorial}
           />
         </div>
-        {overlayTutorial && (
-          <TutorialOverlay
-            tutorial={overlayTutorial}
-            stepIndex={overlayStepIndex}
-            onNext={nextOverlayStep}
-            onPrev={prevOverlayStep}
-            onClose={closeOverlay}
-          />
-        )}
       </AppLayout>
     );
   }
@@ -84,7 +66,7 @@ export default function TutorialsPage() {
               <h1 className="text-xl sm:text-2xl font-bold">Tutorials & Onboarding</h1>
               <p className="text-sm text-muted-foreground">
                 Schritt-für-Schritt Anleitungen für Ihre Rolle als{" "}
-                <Badge variant="secondary" className="text-xs ml-1">{user.role}</Badge>
+                <span className="text-xs ml-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">{user.role}</span>
               </p>
             </div>
           </div>
@@ -93,7 +75,7 @@ export default function TutorialsPage() {
           </Button>
         </div>
 
-        {/* Progress Overview */}
+        {/* Progress */}
         <Card>
           <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between mb-2">
@@ -133,17 +115,6 @@ export default function TutorialsPage() {
           ))}
         </Tabs>
       </div>
-
-      {/* Overlay */}
-      {overlayTutorial && (
-        <TutorialOverlay
-          tutorial={overlayTutorial}
-          stepIndex={overlayStepIndex}
-          onNext={nextOverlayStep}
-          onPrev={prevOverlayStep}
-          onClose={closeOverlay}
-        />
-      )}
     </AppLayout>
   );
 }

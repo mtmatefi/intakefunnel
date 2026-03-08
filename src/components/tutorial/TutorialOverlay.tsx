@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { X, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
 import type { Tutorial } from "@/data/tutorials";
@@ -17,25 +17,57 @@ interface TutorialOverlayProps {
 export function TutorialOverlay({ tutorial, stepIndex, onNext, onPrev, onClose }: TutorialOverlayProps) {
   const step = tutorial.steps[stepIndex];
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [waitingForNav, setWaitingForNav] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === tutorial.steps.length - 1;
   const progressPct = ((stepIndex + 1) / tutorial.steps.length) * 100;
 
+  // Navigate to the correct route if step has one
   useEffect(() => {
+    if (step.route && location.pathname !== step.route) {
+      setWaitingForNav(true);
+      navigate(step.route);
+    } else {
+      setWaitingForNav(false);
+    }
+  }, [step.route, stepIndex, location.pathname, navigate]);
+
+  // After navigation, wait for DOM to settle then find target
+  useEffect(() => {
+    if (waitingForNav && step.route && location.pathname === step.route) {
+      setWaitingForNav(false);
+    }
+  }, [location.pathname, step.route, waitingForNav]);
+
+  // Find and highlight target element
+  useEffect(() => {
+    if (waitingForNav) {
+      setTargetRect(null);
+      return;
+    }
+
     if (!step.targetSelector) {
       setTargetRect(null);
       return;
     }
-    const el = document.querySelector(step.targetSelector);
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      setTargetRect(rect);
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    } else {
-      setTargetRect(null);
-    }
-  }, [step.targetSelector, stepIndex]);
+
+    // Small delay to let page render after navigation
+    const timer = setTimeout(() => {
+      const el = document.querySelector(step.targetSelector!);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        setTargetRect(rect);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        setTargetRect(null);
+      }
+    }, step.route ? 400 : 50);
+
+    return () => clearTimeout(timer);
+  }, [step.targetSelector, stepIndex, waitingForNav, step.route]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -48,7 +80,6 @@ export function TutorialOverlay({ tutorial, stepIndex, onNext, onPrev, onClose }
     return () => window.removeEventListener("keydown", handler);
   }, [onClose, onNext, onPrev, isFirst]);
 
-  // Calculate card position
   const getCardStyle = (): React.CSSProperties => {
     if (!targetRect) {
       return {
@@ -98,13 +129,14 @@ export function TutorialOverlay({ tutorial, stepIndex, onNext, onPrev, onClose }
       {/* Spotlight cutout */}
       {targetRect && (
         <div
-          className="absolute border-2 border-primary rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] pointer-events-none"
+          className="absolute border-2 border-primary rounded-lg pointer-events-none"
           style={{
             top: targetRect.top - 4,
             left: targetRect.left - 4,
             width: targetRect.width + 8,
             height: targetRect.height + 8,
             zIndex: 10001,
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
           }}
         />
       )}
@@ -116,9 +148,9 @@ export function TutorialOverlay({ tutorial, stepIndex, onNext, onPrev, onClose }
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-primary shrink-0" />
-              <Badge variant="outline" className="text-xs">
+              <span className="text-xs text-muted-foreground font-medium">
                 {stepIndex + 1} / {tutorial.steps.length}
-              </Badge>
+              </span>
             </div>
             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onClose}>
               <X className="h-4 w-4" />
@@ -151,9 +183,7 @@ export function TutorialOverlay({ tutorial, stepIndex, onNext, onPrev, onClose }
               <span className="hidden sm:inline">Zurück</span>
             </Button>
 
-            <span className="text-xs text-muted-foreground">
-              ESC zum Schließen
-            </span>
+            <span className="text-xs text-muted-foreground">ESC</span>
 
             <Button size="sm" onClick={onNext} className="gap-1">
               <span>{isLast ? "Fertig ✓" : "Weiter"}</span>

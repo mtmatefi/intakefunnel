@@ -4,16 +4,17 @@ export interface TutorialStep {
   id: string;
   title: string;
   description: string;
-  targetSelector?: string; // CSS selector for overlay spotlight
+  targetSelector?: string;
   placement?: "top" | "bottom" | "left" | "right";
-  action?: string; // Optional action hint like "Click here"
+  action?: string;
+  route?: string;
 }
 
 export interface Tutorial {
   id: string;
   title: string;
   description: string;
-  icon: string; // emoji
+  icon: string;
   roles: UserRole[];
   category: "getting-started" | "features" | "advanced" | "admin";
   estimatedMinutes: number;
@@ -35,19 +36,21 @@ export const tutorials: Tutorial[] = [
         id: "r1-welcome",
         title: "Willkommen beim Intake Funnel",
         description: "Der Intake Funnel hilft Ihnen, Ihre Anforderungen strukturiert zu erfassen. Eine KI führt Sie durch ein Interview und erstellt automatisch eine technische Spezifikation.",
+        route: "/dashboard",
       },
       {
         id: "r1-nav-new",
         title: "Neuen Intake starten",
-        description: "Klicken Sie auf 'New Intake' in der Navigation, um einen neuen Intake zu beginnen.",
+        description: "Klicken Sie auf 'Neuer Intake' in der Navigation, um einen neuen Intake zu beginnen.",
         targetSelector: 'a[href="/intake/new"]',
-        placement: "bottom",
-        action: "Klicken Sie auf 'New Intake'",
+        placement: "right",
+        action: "Klicken Sie auf 'Neuer Intake'",
       },
       {
         id: "r1-title",
         title: "Titel eingeben",
         description: "Geben Sie einen aussagekräftigen Titel für Ihren Intake ein. Die KI verwendet diesen als Ausgangspunkt für das Interview.",
+        route: "/intake/new",
         targetSelector: 'input[placeholder*="Titel"]',
         placement: "bottom",
       },
@@ -55,6 +58,7 @@ export const tutorials: Tutorial[] = [
         id: "r1-interview",
         title: "KI-Interview durchlaufen",
         description: "Die KI stellt Ihnen Fragen zu Ihrem Vorhaben. Beantworten Sie diese so detailliert wie möglich. Die KI erkennt automatisch, ob es sich um eine Initiative, ein Epic oder ein Feature handelt.",
+        route: "/intake/new",
         targetSelector: '[data-tutorial="intake-chat"]',
         placement: "right",
       },
@@ -62,6 +66,7 @@ export const tutorials: Tutorial[] = [
         id: "r1-classification",
         title: "KI-Klassifizierung prüfen",
         description: "Die KI schlägt automatisch eine Kategorie vor (Initiative, Value Stream Epic, Epic oder Feature). Sie können den Vorschlag bestätigen oder überschreiben.",
+        route: "/intake/new",
         targetSelector: '[data-tutorial="classification"]',
         placement: "left",
       },
@@ -69,6 +74,7 @@ export const tutorials: Tutorial[] = [
         id: "r1-matching",
         title: "Initiative-Matching",
         description: "Die KI sucht live nach passenden Initiativen aus Strategy Sculptor und zeigt Matches mit Relevanz-Score an. Verknüpfen Sie passende Initiativen direkt.",
+        route: "/intake/new",
         targetSelector: '[data-tutorial="matching"]',
         placement: "left",
       },
@@ -76,6 +82,7 @@ export const tutorials: Tutorial[] = [
         id: "r1-spec",
         title: "Spec generieren",
         description: "Nach dem Interview klicken Sie auf 'Spec generieren'. Die KI erstellt eine vollständige technische Spezifikation basierend auf Ihren Antworten.",
+        route: "/intake/new",
         targetSelector: '[data-tutorial="generate-spec"]',
         placement: "top",
       },
@@ -83,6 +90,7 @@ export const tutorials: Tutorial[] = [
         id: "r1-done",
         title: "Geschafft! 🎉",
         description: "Ihr Intake wird nun von einem Architekten geprüft. Sie können den Status jederzeit im Dashboard verfolgen.",
+        route: "/dashboard",
       },
     ],
   },
@@ -99,6 +107,7 @@ export const tutorials: Tutorial[] = [
         id: "rd-overview",
         title: "Ihr Dashboard",
         description: "Das Dashboard zeigt alle Ihre Intakes mit aktuellem Status. Hier sehen Sie auf einen Blick, was genehmigt, in Bearbeitung oder offen ist.",
+        route: "/dashboard",
         targetSelector: '[data-tutorial="dashboard-table"]',
         placement: "bottom",
       },
@@ -106,11 +115,13 @@ export const tutorials: Tutorial[] = [
         id: "rd-status",
         title: "Status verstehen",
         description: "Jeder Intake durchläuft Phasen: Draft → Gathering Info → Spec Generated → Pending Approval → Approved/Rejected → Exported. Farben zeigen den aktuellen Status.",
+        route: "/dashboard",
       },
       {
         id: "rd-detail",
         title: "Details einsehen",
         description: "Klicken Sie auf einen Intake, um die vollständige Spezifikation, das Transcript, Routing-Empfehlungen und Compliance-Checks einzusehen.",
+        route: "/dashboard",
       },
       {
         id: "rd-done",
@@ -135,38 +146,44 @@ export const tutorials: Tutorial[] = [
         title: "Architect Queue",
         description: "Die Queue zeigt alle Intakes, die auf Ihre Prüfung warten. Sortiert nach Priorität und WSJF-Score.",
         targetSelector: 'a[href="/architect"]',
-        placement: "bottom",
+        placement: "right",
         action: "Öffnen Sie die Architect Queue",
       },
       {
         id: "ar-review",
         title: "Intake im Detail prüfen",
         description: "Öffnen Sie einen Intake, um die generierte Spec, das Interview-Transcript und die KI-Klassifizierung zu prüfen.",
+        route: "/architect",
       },
       {
         id: "ar-spec-tab",
         title: "Spezifikation prüfen",
         description: "Im Tab 'Spezifikation' sehen Sie die von der KI generierte Spec. Prüfen Sie Vollständigkeit, technische Machbarkeit und Compliance.",
+        route: "/architect",
       },
       {
         id: "ar-routing",
         title: "Routing-Empfehlung",
         description: "Die KI empfiehlt einen Delivery-Pfad (Buy, Config, AI Disposable, Product Grade, Critical). Prüfen und bestätigen Sie die Empfehlung.",
+        route: "/architect",
       },
       {
         id: "ar-impact",
         title: "Impact Score vergeben",
         description: "Bewerten Sie Business Value, Time Criticality, Risk Reduction, Strategic Fit und Effort. Der WSJF-Score wird automatisch berechnet.",
+        route: "/architect",
       },
       {
         id: "ar-followup",
         title: "Rückfragen stellen",
         description: "Fehlen Informationen? Stellen Sie Rückfragen direkt an den Requester. Der Intake wird erst fortgefahren, wenn alle Fragen beantwortet sind.",
+        route: "/architect",
       },
       {
         id: "ar-approve",
         title: "Genehmigen oder Ablehnen",
         description: "Setzen Sie Guardrails, fügen Sie Kommentare hinzu und treffen Sie Ihre Entscheidung: Approve oder Reject.",
+        route: "/architect",
       },
       {
         id: "ar-done",
@@ -189,22 +206,25 @@ export const tutorials: Tutorial[] = [
         title: "Compliance-Bereich öffnen",
         description: "Navigieren Sie zu 'Compliance' in der Seitenleiste. Hier verwalten Sie alle Guidelines und Frameworks.",
         targetSelector: 'a[href="/admin/policies"]',
-        placement: "bottom",
+        placement: "right",
       },
       {
         id: "ac-frameworks",
         title: "Frameworks verstehen",
         description: "Guidelines sind nach Frameworks organisiert (z.B. SOC2, GDPR, ISO27001). Jedes Framework hat eigene Anforderungen.",
+        route: "/admin/policies",
       },
       {
         id: "ac-create",
         title: "Guideline erstellen",
         description: "Erstellen Sie neue Guidelines mit Markdown-Content, Severity-Level und Risiko-Kategorien. Die KI nutzt diese bei der Intake-Prüfung.",
+        route: "/admin/policies",
       },
       {
         id: "ac-versioning",
         title: "Versionierung",
         description: "Jede Änderung an einer Guideline wird versioniert. Sie können den Verlauf einsehen und Änderungen nachvollziehen.",
+        route: "/admin/policies",
       },
       {
         id: "ac-done",
@@ -229,17 +249,19 @@ export const tutorials: Tutorial[] = [
         title: "Benutzerverwaltung öffnen",
         description: "Navigieren Sie zu 'Benutzer' in der Admin-Navigation.",
         targetSelector: 'a[href="/admin/users"]',
-        placement: "bottom",
+        placement: "right",
       },
       {
         id: "au-roles",
         title: "Rollen verstehen",
         description: "Es gibt 4 Rollen: Requester (erstellt Intakes), Architect (prüft & genehmigt), Engineer Lead (technische Übersicht), Admin (voller Zugriff).",
+        route: "/admin/users",
       },
       {
         id: "au-assign",
         title: "Rollen zuweisen",
         description: "Ändern Sie die Rolle eines Benutzers über das Dropdown in der Benutzerliste. Die Änderung wird sofort wirksam.",
+        route: "/admin/users",
       },
       {
         id: "au-impersonate",
@@ -267,24 +289,27 @@ export const tutorials: Tutorial[] = [
       {
         id: "ai-nav",
         title: "Integrationen öffnen",
-        description: "Navigieren Sie zu 'Integrations' in der Admin-Navigation.",
+        description: "Navigieren Sie zu 'Integrationen' in der Admin-Navigation.",
         targetSelector: 'a[href="/admin/integrations"]',
-        placement: "bottom",
+        placement: "right",
       },
       {
         id: "ai-jira",
         title: "Jira konfigurieren",
         description: "Geben Sie Ihre Jira Base URL, API Token und User Email ein. Die Verbindung wird automatisch getestet.",
+        route: "/admin/integrations",
       },
       {
         id: "ai-export",
         title: "Auto-Export verstehen",
         description: "Genehmigte Intakes können automatisch als Jira Epics exportiert werden – inklusive Spec, Guardrails und Impact Score.",
+        route: "/admin/integrations",
       },
       {
         id: "ai-jpd",
         title: "Jira Product Discovery",
         description: "Optional: Verknüpfen Sie Intakes mit JPD Issues für ein durchgängiges Portfolio-Management.",
+        route: "/admin/integrations",
       },
       {
         id: "ai-done",
@@ -306,15 +331,17 @@ export const tutorials: Tutorial[] = [
         id: "aa-audit",
         title: "Audit Log einsehen",
         description: "Das Audit Log zeigt alle Aktionen im System: Wer hat wann was gemacht? Nutzen Sie Filter für gezielte Suche.",
+        route: "/audit",
         targetSelector: 'a[href="/audit"]',
-        placement: "bottom",
+        placement: "right",
       },
       {
         id: "aa-metrics",
         title: "Metriken verstehen",
         description: "Die Metriken-Seite zeigt Durchlaufzeiten, Genehmigungs-Raten, häufige Kategorien und Trend-Analysen.",
+        route: "/metrics",
         targetSelector: 'a[href="/metrics"]',
-        placement: "bottom",
+        placement: "right",
       },
       {
         id: "aa-done",
@@ -338,16 +365,19 @@ export const tutorials: Tutorial[] = [
         id: "eo-dashboard",
         title: "Dashboard als Engineer Lead",
         description: "Ihr Dashboard zeigt genehmigte und exportierte Intakes, die für die Umsetzung bereitstehen.",
+        route: "/dashboard",
       },
       {
         id: "eo-spec",
         title: "Specs verstehen",
         description: "Jeder Intake hat eine detaillierte technische Spezifikation mit Architektur-Entscheidungen, Guardrails und Compliance-Anforderungen.",
+        route: "/dashboard",
       },
       {
         id: "eo-routing",
         title: "Delivery-Pfad beachten",
         description: "Der empfohlene Delivery-Pfad (Buy/Config/AI Disposable/Product Grade/Critical) gibt Ihnen Orientierung für die Ressourcenplanung.",
+        route: "/dashboard",
       },
       {
         id: "eo-done",
