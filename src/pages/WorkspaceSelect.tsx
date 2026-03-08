@@ -88,9 +88,13 @@ const WorkspaceSelect = () => {
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-foreground">{ws.name}</p>
                     <div className="flex items-center gap-2">
-                      {(ws as any).external_workspace_id && (
-                        <Badge variant="outline" className="text-[10px] gap-1">
-                          <Link2 className="h-3 w-3" /> Sculptor
+                      {(ws as any).external_workspace_id ? (
+                        <Badge variant="secondary" className="text-[10px] gap-1 bg-primary/10 text-primary border-primary/20">
+                          <Link2 className="h-3 w-3" /> Strategy Sculptor
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground">
+                          Nur Intake Router
                         </Badge>
                       )}
                     </div>
@@ -98,28 +102,34 @@ const WorkspaceSelect = () => {
                   {ws.description && (
                     <p className="text-xs text-muted-foreground mt-1">{ws.description}</p>
                   )}
+                  {(ws as any).external_source && (
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                      Quelle: {(ws as any).external_source === 'strategy_sculptor' ? 'Strategy Sculptor' : (ws as any).external_source}
+                    </p>
+                  )}
                 </button>
-                {!(ws as any).external_workspace_id && (
-                  <div className="px-4 pb-3 border-t border-border/50">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-muted-foreground hover:text-foreground mt-2 gap-1.5"
-                      disabled={syncing === ws.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSync(ws.id);
-                      }}
-                    >
-                      {syncing === ws.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3" />
-                      )}
-                      Mit Strategy Sculptor verknüpfen
-                    </Button>
-                  </div>
-                )}
+                <div className="px-4 pb-3 border-t border-border/50 flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground hover:text-foreground mt-2 gap-1.5"
+                    disabled={syncing === ws.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSync(ws.id);
+                    }}
+                  >
+                    {syncing === ws.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    {(ws as any).external_workspace_id
+                      ? "Re-Sync mit Strategy Sculptor"
+                      : "Mit Strategy Sculptor verknüpfen"
+                    }
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
