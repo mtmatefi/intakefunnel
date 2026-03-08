@@ -38,6 +38,7 @@ export default function PoliciesPage() {
   const [editingGuideline, setEditingGuideline] = useState<Guideline | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState(false);
+  const [chatEditGuideline, setChatEditGuideline] = useState<Guideline | null>(null);
 
   const { data: guidelines = [], isLoading } = useGuidelines();
   const createMutation = useCreateGuideline();
