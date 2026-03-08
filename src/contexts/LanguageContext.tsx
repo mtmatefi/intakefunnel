@@ -185,6 +185,7 @@ const translations: Record<Language, Record<string, string>> = {
     'category.integrations': 'Integrations',
     'category.ux': 'User Interface',
     'category.nfr': 'Requirements',
+    'category.compliance': 'Compliance & Governance',
 
     // Questions
     'q.problem_statement': 'What problem are you trying to solve? Describe the challenge in your own words.',
