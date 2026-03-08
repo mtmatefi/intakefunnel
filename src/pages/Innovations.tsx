@@ -99,15 +99,26 @@ function InnovationDetailSheet({
   innovation,
   open,
   onClose,
+  onMarkRead,
 }: {
   innovation: SyncedInnovation | null;
   open: boolean;
   onClose: () => void;
+  onMarkRead?: (id: string) => void;
 }) {
   const navigate = useNavigate();
   const { data: feedback = [] } = useInnovationFeedback(innovation?.id);
   const addFeedback = useAddInnovationFeedback();
   const [comment, setComment] = useState("");
+
+  // Mark as read when sheet opens
+  useEffect(() => {
+    if (open && innovation?.id && onMarkRead) {
+      onMarkRead(innovation.id);
+    }
+  }, [open, innovation?.id]);
+
+  if (!innovation) return null;
 
   if (!innovation) return null;
 
