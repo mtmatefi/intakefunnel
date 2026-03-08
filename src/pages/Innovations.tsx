@@ -18,6 +18,7 @@ import {
   Lightbulb, FlaskConical, Rocket, CheckCircle2,
   TrendingUp, ShieldAlert, Target, MessageSquarePlus, PlusCircle,
   Clock, User, ArrowRight, RefreshCw, Search, LayoutGrid, List,
+  GitBranch, ExternalLink, Loader2,
 } from "lucide-react";
 import type { SyncedInnovation } from "@/hooks/useInnovations";
 
