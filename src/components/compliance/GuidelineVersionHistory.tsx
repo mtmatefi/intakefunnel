@@ -4,11 +4,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useGuidelineVersions, type GuidelineVersion } from '@/hooks/useGuidelineVersions';
-import { History, ChevronDown, ChevronUp, ExternalLink, User, Calendar, FileText, ArrowRight } from 'lucide-react';
+import { useGuidelineVersions, useGuidelineRollback, type GuidelineVersion } from '@/hooks/useGuidelineVersions';
+import { History, ChevronDown, ChevronUp, ExternalLink, User, Calendar, FileText, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Props {
   guidelineId: string | undefined;
@@ -33,6 +45,7 @@ const sourceLabels: Record<string, string> = {
   manual: 'Manuell',
   guideline_chat: 'Chat-Assistent',
   intake_chat: 'Intake-Chat',
+  rollback: 'Rollback',
 };
 
 function DiffBlock({ field, oldVal, newVal }: { field: string; oldVal: any; newVal: any }) {
@@ -43,27 +56,36 @@ function DiffBlock({ field, oldVal, newVal }: { field: string; oldVal: any; newV
     return String(v);
   };
 
-  const oldStr = formatValue(oldVal);
-  const newStr = formatValue(newVal);
-
   return (
     <div className="rounded-md border border-border overflow-hidden text-sm">
       <div className="px-3 py-1.5 bg-muted/50 font-medium text-foreground">{label}</div>
       <div className="grid grid-cols-2 divide-x divide-border">
         <div className="px-3 py-2 bg-destructive/5">
           <span className="text-xs text-muted-foreground block mb-0.5">Vorher</span>
-          <span className="text-foreground/70 whitespace-pre-wrap break-words line-clamp-4">{oldStr}</span>
+          <span className="text-foreground/70 whitespace-pre-wrap break-words line-clamp-4">{formatValue(oldVal)}</span>
         </div>
         <div className="px-3 py-2 bg-primary/5">
           <span className="text-xs text-muted-foreground block mb-0.5">Nachher</span>
-          <span className="text-foreground whitespace-pre-wrap break-words line-clamp-4">{newStr}</span>
+          <span className="text-foreground whitespace-pre-wrap break-words line-clamp-4">{formatValue(newVal)}</span>
         </div>
       </div>
     </div>
   );
 }
 
-function VersionEntry({ version, isLatest }: { version: GuidelineVersion; isLatest: boolean }) {
+function VersionEntry({
+  version,
+  isLatest,
+  canRollback,
+  onRollback,
+  isRollingBack,
+}: {
+  version: GuidelineVersion;
+  isLatest: boolean;
+  canRollback: boolean;
+  onRollback: (v: GuidelineVersion) => void;
+  isRollingBack: boolean;
+}) {
   const [open, setOpen] = useState(isLatest);
   const changedFields = version.changed_fields || [];
   const previousValues = version.previous_values || {};
@@ -73,12 +95,13 @@ function VersionEntry({ version, isLatest }: { version: GuidelineVersion; isLate
     currentValues[field] = (version as any)[field];
   }
 
+  const isRollbackVersion = version.change_source === 'rollback';
+
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div className="relative pl-8">
-        {/* Timeline dot */}
         <div className={`absolute left-0 top-2 w-4 h-4 rounded-full border-2 ${
-          isLatest ? 'bg-primary border-primary' : 'bg-background border-muted-foreground/40'
+          isLatest ? 'bg-primary border-primary' : isRollbackVersion ? 'bg-warning border-warning' : 'bg-background border-muted-foreground/40'
         }`} />
 
         <CollapsibleTrigger asChild>
@@ -91,7 +114,8 @@ function VersionEntry({ version, isLatest }: { version: GuidelineVersion; isLate
                 <span className="text-sm font-medium text-foreground">
                   {version.change_reason}
                 </span>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant={isRollbackVersion ? 'destructive' : 'secondary'} className="text-xs">
+                  {isRollbackVersion && <RotateCcw className="h-3 w-3 mr-1" />}
                   {sourceLabels[version.change_source] || version.change_source}
                 </Badge>
               </div>
@@ -141,16 +165,33 @@ function VersionEntry({ version, isLatest }: { version: GuidelineVersion; isLate
               </div>
             )}
 
-            {version.intake_id && (
-              <div className="mt-2">
+            <div className="flex items-center gap-2 mt-2">
+              {version.intake_id && (
                 <Button variant="outline" size="sm" asChild>
                   <a href={`/intake/${version.intake_id}`} className="gap-1.5">
                     <ArrowRight className="h-3.5 w-3.5" />
                     Zum verknüpften Intake
                   </a>
                 </Button>
-              </div>
-            )}
+              )}
+
+              {!isLatest && canRollback && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); onRollback(version); }}
+                  disabled={isRollingBack}
+                  className="gap-1.5"
+                >
+                  {isRollingBack ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  )}
+                  Auf diese Version zurücksetzen
+                </Button>
+              )}
+            </div>
           </div>
         </CollapsibleContent>
 
@@ -161,47 +202,107 @@ function VersionEntry({ version, isLatest }: { version: GuidelineVersion; isLate
 }
 
 export function GuidelineVersionHistory({ guidelineId, guidelineName, open, onOpenChange }: Props) {
+  const { user } = useAuth();
   const { data: versions = [], isLoading } = useGuidelineVersions(guidelineId);
+  const rollbackMutation = useGuidelineRollback();
+  const [rollbackTarget, setRollbackTarget] = useState<GuidelineVersion | null>(null);
+
+  const canRollback = user?.role === 'admin' || user?.role === 'architect';
+
+  const handleRollback = () => {
+    if (!rollbackTarget || !guidelineId || !user) return;
+    rollbackMutation.mutate(
+      {
+        guidelineId,
+        targetVersion: rollbackTarget,
+        rolledBackBy: user.id,
+      },
+      {
+        onSuccess: (result) => {
+          if (result.version === 0) {
+            toast.info('Keine Unterschiede – Guideline ist bereits auf diesem Stand.');
+          } else {
+            toast.success(`Rollback auf v${rollbackTarget.version_number} erfolgreich (neue Version: v${result.version})`);
+          }
+          setRollbackTarget(null);
+        },
+        onError: (err) => toast.error('Rollback fehlgeschlagen: ' + err.message),
+      }
+    );
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <History className="h-5 w-5 text-primary" />
-            Versionshistorie: {guidelineName}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Versionshistorie: {guidelineName}
+            </DialogTitle>
+          </DialogHeader>
 
-        <ScrollArea className="max-h-[65vh] pr-4">
-          {isLoading ? (
-            <div className="flex justify-center py-12 text-muted-foreground text-sm">
-              Lade Versionen…
-            </div>
-          ) : versions.length === 0 ? (
-            <div className="text-center py-12">
-              <History className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">
-                Noch keine Versionshistorie vorhanden.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Änderungen werden automatisch versioniert.
-              </p>
-            </div>
-          ) : (
-            <div className="relative ml-2">
-              {/* Timeline line */}
-              <div className="absolute left-[7px] top-4 bottom-4 w-0.5 bg-border" />
-
-              <div className="space-y-1">
-                {versions.map((v, i) => (
-                  <VersionEntry key={v.id} version={v} isLatest={i === 0} />
-                ))}
+          <ScrollArea className="max-h-[65vh] pr-4">
+            {isLoading ? (
+              <div className="flex justify-center py-12 text-muted-foreground text-sm">
+                Lade Versionen…
               </div>
-            </div>
-          )}
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+            ) : versions.length === 0 ? (
+              <div className="text-center py-12">
+                <History className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">
+                  Noch keine Versionshistorie vorhanden.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Änderungen werden automatisch versioniert.
+                </p>
+              </div>
+            ) : (
+              <div className="relative ml-2">
+                <div className="absolute left-[7px] top-4 bottom-4 w-0.5 bg-border" />
+                <div className="space-y-1">
+                  {versions.map((v, i) => (
+                    <VersionEntry
+                      key={v.id}
+                      version={v}
+                      isLatest={i === 0}
+                      canRollback={!!canRollback}
+                      onRollback={setRollbackTarget}
+                      isRollingBack={rollbackMutation.isPending && rollbackTarget?.id === v.id}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!rollbackTarget} onOpenChange={(o) => !o && setRollbackTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Auf Version {rollbackTarget?.version_number} zurücksetzen?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Die Guideline wird auf den Stand von Version {rollbackTarget?.version_number} zurückgesetzt.
+              Dies erstellt eine neue Version mit den wiederhergestellten Werten – keine Daten gehen verloren.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={rollbackMutation.isPending}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRollback} disabled={rollbackMutation.isPending}>
+              {rollbackMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Zurücksetzen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
