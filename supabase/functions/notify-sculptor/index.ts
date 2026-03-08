@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
       { data: routingScores },
       { data: specs },
       { data: jiraExports },
+      { data: guidelines },
     ] = await Promise.all([
       db.from("initiative_intake_links").select("*").eq("intake_id", intake_id),
       db.from("intakes").select("*").eq("id", intake_id).single(),
@@ -68,6 +69,7 @@ Deno.serve(async (req) => {
       db.from("routing_scores").select("*").eq("intake_id", intake_id),
       db.from("spec_documents").select("*").eq("intake_id", intake_id).order("version", { ascending: false }).limit(1).maybeSingle(),
       db.from("jira_exports").select("*").eq("intake_id", intake_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("guidelines").select("*").eq("is_active", true),
     ]);
 
     if (!links || links.length === 0) {
