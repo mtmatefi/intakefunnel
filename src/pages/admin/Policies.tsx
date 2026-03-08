@@ -4,12 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertTriangle, Plus, Search, Shield, Loader2 } from 'lucide-react';
+import { AlertTriangle, Plus, Search, Shield, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { ComplianceFrameworkTabs } from '@/components/compliance/ComplianceFrameworkTabs';
 import { ComplianceStats } from '@/components/compliance/ComplianceStats';
 import { GuidelineCard } from '@/components/compliance/GuidelineCard';
 import { GuidelineEditorDialog } from '@/components/compliance/GuidelineEditorDialog';
+import { GuidelineChatCreator } from '@/components/compliance/GuidelineChatCreator';
 import {
   useGuidelines,
   useCreateGuideline,
