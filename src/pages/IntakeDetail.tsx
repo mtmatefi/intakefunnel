@@ -256,9 +256,10 @@ export default function IntakeDetailPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="spec" className="gap-2"><FileText className="h-4 w-4" />Spezifikation</TabsTrigger>
-            <TabsTrigger value="transcript" className="gap-2"><MessageSquare className="h-4 w-4" />Transkript</TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2"><MessageSquare className="h-4 w-4" />Chat</TabsTrigger>
+            <TabsTrigger value="transcript" className="gap-2"><History className="h-4 w-4" />Transkript</TabsTrigger>
             <TabsTrigger value="routing" className="gap-2"><Route className="h-4 w-4" />Routing</TabsTrigger>
           </TabsList>
 
