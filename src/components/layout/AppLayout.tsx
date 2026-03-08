@@ -113,6 +113,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, isImpersonating, switchRole, stopImpersonating, logout } = useAuth();
+  const { workspace, workspaces, setWorkspace } = useWorkspace();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
