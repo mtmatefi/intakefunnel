@@ -628,8 +628,9 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
       // Step 1: Create intake record
       toast.loading(language === 'de' ? 'Speichere Interview...' : 'Saving interview...', { id: 'gen-spec' });
       
-      // Generate title from first answer or problem statement
-      const title = answers['problem_statement']?.substring(0, 100) || 
+      // Generate title from innovation or first answer
+      const title = innovationContext?.title ||
+                    answers['problem_statement']?.substring(0, 100) || 
                     answers['current_process']?.substring(0, 100) ||
                     `Intake ${new Date().toLocaleDateString()}`;
       
