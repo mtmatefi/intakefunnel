@@ -16,6 +16,7 @@ import AuditLogPage from "./pages/AuditLog";
 import PoliciesPage from "./pages/admin/Policies";
 import IntegrationsPage from "./pages/admin/Integrations";
 import InterviewConfigPage from "./pages/admin/InterviewConfig";
+import UserManagementPage from "./pages/admin/UserManagement";
 import ProfilePage from "./pages/Profile";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
