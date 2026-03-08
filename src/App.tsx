@@ -11,10 +11,12 @@ import DashboardPage from "./pages/Dashboard";
 import NewIntakePage from "./pages/NewIntake";
 import IntakeDetailPage from "./pages/IntakeDetail";
 import ArchitectQueuePage from "./pages/ArchitectQueue";
+import MetricsPage from "./pages/Metrics";
 import AuditLogPage from "./pages/AuditLog";
 import PoliciesPage from "./pages/admin/Policies";
 import IntegrationsPage from "./pages/admin/Integrations";
 import InterviewConfigPage from "./pages/admin/InterviewConfig";
+import UserManagementPage from "./pages/admin/UserManagement";
 import ProfilePage from "./pages/Profile";
 import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -57,10 +59,12 @@ function AppRoutes() {
       <Route path="/intake/new" element={<ProtectedRoute><NewIntakePage /></ProtectedRoute>} />
       <Route path="/intake/:id" element={<ProtectedRoute><IntakeDetailPage /></ProtectedRoute>} />
       <Route path="/architect" element={<ProtectedRoute><ArchitectQueuePage /></ProtectedRoute>} />
+      <Route path="/metrics" element={<ProtectedRoute><MetricsPage /></ProtectedRoute>} />
       <Route path="/audit" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
       <Route path="/admin/policies" element={<ProtectedRoute><PoliciesPage /></ProtectedRoute>} />
       <Route path="/admin/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
       <Route path="/admin/interview-config" element={<ProtectedRoute><InterviewConfigPage /></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />

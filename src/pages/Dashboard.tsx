@@ -7,46 +7,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { useIntakes } from '@/hooks/useIntakes';
+import { useAllImpactScores } from '@/hooks/useImpactScores';
+import { ImpactScoreCard } from '@/components/intake/ImpactScoreCard';
 import { deliveryPathInfo } from '@/data/demo';
 import type { IntakeStatus } from '@/types/intake';
 import { 
-  PlusCircle, 
-  Search, 
-  Filter, 
-  ArrowUpRight,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  FileText,
-  Send,
-  Loader2,
+  PlusCircle, Search, Filter, ArrowUpRight, Clock, CheckCircle, AlertCircle,
+  FileText, Send, Loader2, BarChart3, TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const statusConfig: Record<IntakeStatus, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; icon: typeof Clock }> = {
-  draft: { label: 'Draft', variant: 'outline', icon: FileText },
-  gathering_info: { label: 'Gathering Info', variant: 'secondary', icon: Clock },
-  spec_generated: { label: 'Spec Ready', variant: 'secondary', icon: FileText },
-  pending_approval: { label: 'Pending Approval', variant: 'default', icon: Clock },
-  approved: { label: 'Approved', variant: 'default', icon: CheckCircle },
-  rejected: { label: 'Rejected', variant: 'destructive', icon: AlertCircle },
-  exported: { label: 'Exported', variant: 'default', icon: Send },
-  closed: { label: 'Closed', variant: 'outline', icon: CheckCircle },
+  draft: { label: 'Entwurf', variant: 'outline', icon: FileText },
+  gathering_info: { label: 'Interview', variant: 'secondary', icon: Clock },
+  spec_generated: { label: 'Spec bereit', variant: 'secondary', icon: FileText },
+  pending_approval: { label: 'Zur Prüfung', variant: 'default', icon: Clock },
+  approved: { label: 'Genehmigt', variant: 'default', icon: CheckCircle },
+  rejected: { label: 'Abgelehnt', variant: 'destructive', icon: AlertCircle },
+  exported: { label: 'Exportiert', variant: 'default', icon: Send },
+  closed: { label: 'Geschlossen', variant: 'outline', icon: CheckCircle },
 };
 
 const priorityColors = {
@@ -59,26 +44,37 @@ const priorityColors = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: intakes = [], isLoading } = useIntakes();
+  const { data: impactScores = [] } = useAllImpactScores();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'updated' | 'wsjf' | 'created'>('updated');
+
+  const scoreMap = new Map(impactScores.map(s => [s.intake_id, s]));
 
   const filteredIntakes = intakes.filter(intake => {
-    const matchesSearch = intake.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = intake.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (intake.jpd_issue_key || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || intake.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || intake.category === categoryFilter;
-    
-    return matchesSearch && matchesStatus && matchesCategory;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Sorting
+  const sortedIntakes = [...filteredIntakes].sort((a, b) => {
+    if (sortBy === 'wsjf') {
+      const sA = Number(scoreMap.get(a.id)?.wsjf_score ?? 0);
+      const sB = Number(scoreMap.get(b.id)?.wsjf_score ?? 0);
+      return sB - sA;
+    }
+    if (sortBy === 'created') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
 
   const stats = {
     total: intakes.length,
     pending: intakes.filter(i => i.status === 'pending_approval').length,
     approved: intakes.filter(i => i.status === 'approved').length,
-    draft: intakes.filter(i => i.status === 'draft').length,
+    inProgress: intakes.filter(i => ['gathering_info', 'spec_generated'].includes(i.status)).length,
   };
-
-  const categories = [...new Set(intakes.map(i => i.category).filter(Boolean))];
 
   return (
     <AppLayout>
@@ -88,15 +84,13 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground">
-              {user?.role === 'requester' 
-                ? 'Track your software intake requests'
-                : 'Manage and review intake requests'}
+              {user?.role === 'requester' ? 'Ihre Software-Intake-Anfragen' : 'Alle Intake-Anfragen verwalten'}
             </p>
           </div>
           <Button asChild>
             <Link to="/intake/new">
               <PlusCircle className="mr-2 h-4 w-4" />
-              New Intake
+              Neuer Intake
             </Link>
           </Button>
         </div>
@@ -105,26 +99,46 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">Total Intakes</p>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <div>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                  <p className="text-xs text-muted-foreground">Gesamt</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-warning">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">Pending Approval</p>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-info" />
+                <div>
+                  <div className="text-2xl font-bold">{stats.inProgress}</div>
+                  <p className="text-xs text-muted-foreground">In Bearbeitung</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-success">{stats.approved}</div>
-              <p className="text-xs text-muted-foreground">Approved</p>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-warning" />
+                <div>
+                  <div className="text-2xl font-bold text-warning">{stats.pending}</div>
+                  <p className="text-xs text-muted-foreground">Zur Prüfung</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{stats.draft}</div>
-              <p className="text-xs text-muted-foreground">Drafts</p>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <div>
+                  <div className="text-2xl font-bold text-success">{stats.approved}</div>
+                  <p className="text-xs text-muted-foreground">Genehmigt</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -136,7 +150,7 @@ export default function DashboardPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search intakes..."
+                  placeholder="Suche nach Titel oder Jira-Key..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -149,21 +163,20 @@ export default function DashboardPage() {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="all">Alle Status</SelectItem>
                     {Object.entries(statusConfig).map(([key, config]) => (
                       <SelectItem key={key} value={key}>{config.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Category" />
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Sortierung" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat!}>{cat}</SelectItem>
-                    ))}
+                    <SelectItem value="updated">Zuletzt aktualisiert</SelectItem>
+                    <SelectItem value="created">Zuletzt erstellt</SelectItem>
+                    <SelectItem value="wsjf">WSJF Score ↓</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -178,35 +191,41 @@ export default function DashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[300px]">Title</TableHead>
+                    <TableHead className="w-[300px]">Titel</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Updated</TableHead>
+                    <TableHead>Priorität</TableHead>
+                    <TableHead>WSJF</TableHead>
+                    <TableHead>Aktualisiert</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredIntakes.length === 0 ? (
+                  {sortedIntakes.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        No intakes found. Create your first intake to get started.
+                        Keine Intakes gefunden. Erstellen Sie Ihren ersten Intake.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredIntakes.map((intake) => {
+                    sortedIntakes.map((intake) => {
                       const status = statusConfig[intake.status];
+                      const score = scoreMap.get(intake.id);
                       return (
                         <TableRow key={intake.id}>
                           <TableCell>
-                            <Link 
-                              to={`/intake/${intake.id}`}
-                              className="font-medium text-foreground hover:underline"
-                            >
-                              {intake.title}
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              {intake.jpd_issue_key && (
+                                <Badge variant="outline" className="font-mono text-xs flex-shrink-0">{intake.jpd_issue_key}</Badge>
+                              )}
+                              <Link 
+                                to={`/intake/${intake.id}`}
+                                className="font-medium text-foreground hover:underline"
+                              >
+                                {intake.title}
+                              </Link>
+                            </div>
                             {intake.value_stream && (
-                              <p className="text-xs text-muted-foreground">{intake.value_stream}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{intake.value_stream} • {intake.category}</p>
                             )}
                           </TableCell>
                           <TableCell>
@@ -215,21 +234,22 @@ export default function DashboardPage() {
                               {status.label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {intake.category || '—'}
-                          </TableCell>
                           <TableCell>
                             {intake.priority && (
-                              <span className={cn(
-                                'px-2 py-1 text-xs font-medium capitalize',
-                                priorityColors[intake.priority as keyof typeof priorityColors]
-                              )}>
+                              <span className={cn('px-2 py-1 text-xs font-medium capitalize rounded', priorityColors[intake.priority as keyof typeof priorityColors])}>
                                 {intake.priority}
                               </span>
                             )}
                           </TableCell>
+                          <TableCell>
+                            {score ? (
+                              <span className="text-sm font-bold">{Number(score.wsjf_score).toFixed(1)}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {new Date(intake.updated_at).toLocaleDateString()}
+                            {new Date(intake.updated_at).toLocaleDateString('de-DE')}
                           </TableCell>
                           <TableCell>
                             <Button variant="ghost" size="icon" asChild>
@@ -252,16 +272,13 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Delivery Paths</CardTitle>
-            <CardDescription>How intakes are routed based on complexity and requirements</CardDescription>
+            <CardDescription>So werden Intakes basierend auf Komplexität und Anforderungen geroutet</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               {Object.entries(deliveryPathInfo).map(([key, info]) => (
-                <div key={key} className="flex items-start gap-2 p-2 border border-border">
-                  <div className={cn(
-                    'w-3 h-3 mt-1 flex-shrink-0',
-                    `bg-${info.color}`
-                  )} style={{ backgroundColor: `hsl(var(--${info.color}))` }} />
+                <div key={key} className="flex items-start gap-2 p-2 border border-border rounded">
+                  <div className="w-3 h-3 mt-1 flex-shrink-0 rounded-full" style={{ backgroundColor: `hsl(var(--${info.color}))` }} />
                   <div>
                     <p className="font-medium text-sm">{info.label}</p>
                     <p className="text-xs text-muted-foreground">{info.description}</p>

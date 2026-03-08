@@ -24,6 +24,7 @@ import {
   ChevronDown,
   UserCog,
   X,
+  BarChart3,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
@@ -36,10 +37,12 @@ const navigation = [
   },
   { name: "New Intake", href: "/intake/new", icon: PlusCircle, roles: ["requester", "architect", "admin"] },
   { name: "Architect Queue", href: "/architect", icon: ClipboardCheck, roles: ["architect", "admin"] },
+  { name: "Metriken", href: "/metrics", icon: BarChart3, roles: ["architect", "admin"] },
   { name: "Interview Setting", href: "/admin/interview-config", icon: PlusCircle, roles: ["architect", "admin"] },
   { name: "Audit Log", href: "/audit", icon: FileText, roles: ["admin"] },
   { name: "Policies", href: "/admin/policies", icon: Shield, roles: ["admin"] },
   { name: "Integrations", href: "/admin/integrations", icon: Settings, roles: ["admin"] },
+  { name: "Benutzer", href: "/admin/users", icon: UserCog, roles: ["admin"] },
 ];
 
 const roleLabels: Record<UserRole, string> = {

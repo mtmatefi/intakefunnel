@@ -159,6 +159,59 @@ export type Database = {
         }
         Relationships: []
       }
+      impact_scores: {
+        Row: {
+          business_value: number
+          created_at: string
+          effort_estimate: number
+          id: string
+          intake_id: string
+          notes: string | null
+          risk_reduction: number
+          scored_by: string
+          strategic_fit: number
+          time_criticality: number
+          updated_at: string
+          wsjf_score: number | null
+        }
+        Insert: {
+          business_value?: number
+          created_at?: string
+          effort_estimate?: number
+          id?: string
+          intake_id: string
+          notes?: string | null
+          risk_reduction?: number
+          scored_by: string
+          strategic_fit?: number
+          time_criticality?: number
+          updated_at?: string
+          wsjf_score?: number | null
+        }
+        Update: {
+          business_value?: number
+          created_at?: string
+          effort_estimate?: number
+          id?: string
+          intake_id?: string
+          notes?: string | null
+          risk_reduction?: number
+          scored_by?: string
+          strategic_fit?: number
+          time_criticality?: number
+          updated_at?: string
+          wsjf_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impact_scores_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: true
+            referencedRelation: "intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intakes: {
         Row: {
           category: string | null
