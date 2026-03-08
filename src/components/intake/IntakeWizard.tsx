@@ -882,7 +882,7 @@ export function IntakeWizard() {
 
         {/* Chat Interface */}
         <div className="lg:col-span-2">
-          <Card className="h-[600px] flex flex-col">
+          <Card className="h-[450px] sm:h-[600px] flex flex-col">
             <CardHeader className="pb-3 border-b border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
