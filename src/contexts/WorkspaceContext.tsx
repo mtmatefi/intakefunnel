@@ -9,6 +9,8 @@ interface Workspace {
   created_by: string;
   created_at: string;
   updated_at: string;
+  external_workspace_id?: string | null;
+  external_source?: string | null;
 }
 
 interface WorkspaceContextType {
@@ -16,7 +18,8 @@ interface WorkspaceContextType {
   workspaces: Workspace[];
   setWorkspace: (ws: Workspace) => void;
   loading: boolean;
-  createWorkspace: (name: string, description?: string) => Promise<Workspace | null>;
+  createWorkspace: (name: string, description?: string, syncToSculptor?: boolean) => Promise<Workspace | null>;
+  syncWorkspaceToSculptor: (workspaceId: string) => Promise<boolean>;
   refreshWorkspaces: () => Promise<void>;
 }
 
@@ -26,6 +29,7 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
   setWorkspace: () => {},
   loading: true,
   createWorkspace: async () => null,
+  syncWorkspaceToSculptor: async () => false,
   refreshWorkspaces: async () => {},
 });
 
@@ -56,7 +60,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const ws = (data ?? []) as Workspace[];
     setWorkspaces(ws);
 
-    // Restore previously selected workspace
     const savedId = localStorage.getItem(WS_STORAGE_KEY);
     const saved = ws.find((w) => w.id === savedId);
     if (saved) {
@@ -77,7 +80,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(WS_STORAGE_KEY, ws.id);
   }, []);
 
-  const createWorkspace = useCallback(async (name: string, description?: string): Promise<Workspace | null> => {
+  const syncWorkspaceToSculptor = useCallback(async (workspaceId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-to-sculptor", {
+        body: { action: "sync_workspace_to_sculptor", workspace_id: workspaceId },
+      });
+      if (error) throw error;
+      // Refresh to get updated external_workspace_id
+      await loadWorkspaces();
+      return true;
+    } catch (err) {
+      console.error("Sync to sculptor failed:", err);
+      return false;
+    }
+  }, [loadWorkspaces]);
+
+  const createWorkspace = useCallback(async (name: string, description?: string, syncToSculptor?: boolean): Promise<Workspace | null> => {
     if (!user) return null;
 
     const { data, error } = await supabase.rpc("create_workspace_with_owner", {
@@ -98,11 +116,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const newWs = ws as Workspace;
     setWorkspaces((prev) => [newWs, ...prev]);
     setWorkspace(newWs);
+
+    // Optionally sync to Strategy Sculptor
+    if (syncToSculptor) {
+      await syncWorkspaceToSculptor(newWs.id);
+    }
+
     return newWs;
-  }, [user, setWorkspace]);
+  }, [user, setWorkspace, syncWorkspaceToSculptor]);
 
   return (
-    <WorkspaceContext.Provider value={{ workspace, workspaces, setWorkspace, loading, createWorkspace, refreshWorkspaces: loadWorkspaces }}>
+    <WorkspaceContext.Provider value={{ workspace, workspaces, setWorkspace, loading, createWorkspace, syncWorkspaceToSculptor, refreshWorkspaces: loadWorkspaces }}>
       {children}
     </WorkspaceContext.Provider>
   );
