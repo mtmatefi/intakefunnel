@@ -24,6 +24,12 @@ import {
   Check,
   Plus,
   X,
+  Target,
+  Link2,
+  TrendingUp,
+  Layers,
+  Zap,
+  GitBranch,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
