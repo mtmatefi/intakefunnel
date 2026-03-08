@@ -76,6 +76,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} />
+        <Route path="/workspace" element={<WorkspaceRoute><WorkspaceSelect /></WorkspaceRoute>} />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/intake/new" element={<ProtectedRoute><NewIntakePage /></ProtectedRoute>} />
