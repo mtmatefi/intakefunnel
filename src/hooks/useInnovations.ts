@@ -37,6 +37,24 @@ export interface InnovationFeedback {
   updated_at: string;
 }
 
+// Trigger fetch from Sculptor and sync to local DB
+export function useFetchInnovationsFromSculptor() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (workspaceId: string) => {
+      const { data, error } = await supabase.functions.invoke('fetch-innovations', {
+        body: { workspace_id: workspaceId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['synced-innovations'] });
+    },
+  });
+}
+
 export function useInnovations(workspaceId?: string) {
   return useQuery({
     queryKey: ['synced-innovations', workspaceId],
