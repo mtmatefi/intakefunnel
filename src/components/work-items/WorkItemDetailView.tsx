@@ -95,7 +95,7 @@ function TreeNode({
 }
 
 // ── Right: Detail panel ──
-function DetailPanel({ item }: { item: WorkItemTree }) {
+function DetailPanel({ item, onTranslate, isTranslating }: { item: WorkItemTree; onTranslate?: () => void; isTranslating?: boolean }) {
   const hasAC = item.acceptance_criteria && item.acceptance_criteria.length > 0;
   const hasFR = item.functional_requirements && item.functional_requirements.length > 0;
   const hasNFR = item.non_functional_requirements && item.non_functional_requirements.length > 0;
