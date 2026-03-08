@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
       initiative_data,
       create_intake,
       intake_defaults,
+      callback_url,
     } = body;
 
     // Validate required fields
@@ -67,6 +68,7 @@ Deno.serve(async (req) => {
           source_app: "strategy_sculptor",
           sync_status: "linked",
           last_synced_at: new Date().toISOString(),
+          callback_url: callback_url || null,
         },
         { onConflict: "tenant_id,initiative_id" }
       )
