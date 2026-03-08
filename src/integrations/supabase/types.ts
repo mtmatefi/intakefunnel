@@ -125,35 +125,59 @@ export type Database = {
       }
       guidelines: {
         Row: {
+          applicability_conditions: Json | null
+          compliance_framework: string | null
           content_markdown: string
           created_at: string
           created_by: string
           description: string | null
           id: string
           is_active: boolean
+          last_reviewed_at: string | null
+          linked_initiative_ids: string[] | null
           name: string
+          review_frequency_days: number | null
+          reviewed_by: string | null
+          risk_categories: string[] | null
+          severity: string | null
           type: string
           updated_at: string
         }
         Insert: {
+          applicability_conditions?: Json | null
+          compliance_framework?: string | null
           content_markdown: string
           created_at?: string
           created_by: string
           description?: string | null
           id?: string
           is_active?: boolean
+          last_reviewed_at?: string | null
+          linked_initiative_ids?: string[] | null
           name: string
+          review_frequency_days?: number | null
+          reviewed_by?: string | null
+          risk_categories?: string[] | null
+          severity?: string | null
           type: string
           updated_at?: string
         }
         Update: {
+          applicability_conditions?: Json | null
+          compliance_framework?: string | null
           content_markdown?: string
           created_at?: string
           created_by?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          last_reviewed_at?: string | null
+          linked_initiative_ids?: string[] | null
           name?: string
+          review_frequency_days?: number | null
+          reviewed_by?: string | null
+          risk_categories?: string[] | null
+          severity?: string | null
           type?: string
           updated_at?: string
         }
