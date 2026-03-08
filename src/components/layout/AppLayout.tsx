@@ -84,6 +84,7 @@ const navSections: NavSection[] = [
     badge: "ADM",
     badgeColor: "text-coral border-coral/30 bg-coral/10",
     items: [
+      { name: "Plattform-Admin", href: "/platform-admin", icon: Shield, roles: ["admin"] },
       { name: "Integrationen", href: "/admin/integrations", icon: Settings, roles: ["admin"] },
       { name: "Benutzer", href: "/admin/users", icon: UserCog, roles: ["admin"] },
     ],
