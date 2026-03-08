@@ -149,26 +149,28 @@ export default function PoliciesPage() {
           />
         </div>
       ) : (
-        <div className="p-6 space-y-5 max-w-6xl">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-w-6xl">
           {/* Header */}
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <Shield className="h-7 w-7 text-primary" />
-                <h1 className="text-2xl font-bold text-foreground">Compliance & Guidelines</h1>
+                <Shield className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground">Compliance & Guidelines</h1>
               </div>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 ITAR, Export Control, Security, DSGVO – KI-gestützt erstellen, mit Risiken verknüpfen
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button variant="outline" onClick={() => setChatMode(true)} className="gap-2">
+              <Button variant="outline" onClick={() => setChatMode(true)} size="sm" className="gap-2">
                 <MessageSquare className="h-4 w-4" />
-                Chat-Assistent
+                <span className="hidden sm:inline">Chat-Assistent</span>
+                <span className="sm:hidden">Chat</span>
               </Button>
-              <Button onClick={() => { setEditingGuideline(null); setEditorOpen(true); }} className="gap-2">
+              <Button onClick={() => { setEditingGuideline(null); setEditorOpen(true); }} size="sm" className="gap-2">
                 <Plus className="h-4 w-4" />
-                Neue Guideline
+                <span className="hidden sm:inline">Neue Guideline</span>
+                <span className="sm:hidden">Neu</span>
               </Button>
             </div>
           </div>
