@@ -150,6 +150,67 @@ Deno.serve(async (req) => {
       };
     }
 
+    // Compliance & Governance assessment for risk/trend weighting
+    if (guidelines && guidelines.length > 0) {
+      // Extract compliance assessment from spec if available
+      const structured = specs?.structured_json as Record<string, any> || {};
+      const specCompliance = structured.complianceAssessment || [];
+
+      // Group guidelines by framework
+      const frameworkMap: Record<string, any[]> = {};
+      for (const g of guidelines) {
+        const fw = g.compliance_framework || "general";
+        if (!frameworkMap[fw]) frameworkMap[fw] = [];
+        frameworkMap[fw].push({
+          id: g.id,
+          name: g.name,
+          type: g.type,
+          severity: g.severity,
+          risk_categories: g.risk_categories || [],
+          linked_initiative_ids: g.linked_initiative_ids || [],
+          review_status: g.last_reviewed_at
+            ? (Date.now() - new Date(g.last_reviewed_at).getTime() > (g.review_frequency_days || 365) * 86400000 ? "overdue" : "current")
+            : "never_reviewed",
+        });
+      }
+
+      // Match spec compliance status to guidelines
+      const complianceAssessment = Object.entries(frameworkMap).map(([framework, items]) => {
+        const specEntry = specCompliance.find((s: any) => s.framework?.toLowerCase() === framework.toLowerCase());
+        const criticalCount = items.filter((i: any) => i.severity === "critical").length;
+        const highCount = items.filter((i: any) => i.severity === "high").length;
+
+        return {
+          framework,
+          guideline_count: items.length,
+          critical_guidelines: criticalCount,
+          high_guidelines: highCount,
+          status: specEntry?.status || (criticalCount > 0 ? "requires_assessment" : "pending"),
+          required_actions: specEntry?.requiredActions || items
+            .filter((i: any) => i.severity === "critical" || i.severity === "high")
+            .map((i: any) => i.name),
+          risk_categories: [...new Set(items.flatMap((i: any) => i.risk_categories))],
+          guidelines: items,
+        };
+      });
+
+      // Compute overall risk weight modifier for Strategy Sculptor
+      const totalCritical = complianceAssessment.reduce((sum, ca) => sum + ca.critical_guidelines, 0);
+      const totalHigh = complianceAssessment.reduce((sum, ca) => sum + ca.high_guidelines, 0);
+      const riskWeightModifier = 1 + (totalCritical * 0.15) + (totalHigh * 0.08);
+
+      enrichment.compliance_assessment = {
+        frameworks: complianceAssessment,
+        summary: {
+          total_active_guidelines: guidelines.length,
+          total_critical: totalCritical,
+          total_high: totalHigh,
+          risk_weight_modifier: Math.round(riskWeightModifier * 100) / 100,
+          assessed_at: new Date().toISOString(),
+        },
+      };
+    }
+
     // Send to each linked callback URL
     const results: Array<{ tenant_id: string; initiative_id: string; status: string; error?: string }> = [];
 
