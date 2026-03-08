@@ -58,6 +58,7 @@ function AppRoutes() {
       <Route path="/intake/new" element={<ProtectedRoute><NewIntakePage /></ProtectedRoute>} />
       <Route path="/intake/:id" element={<ProtectedRoute><IntakeDetailPage /></ProtectedRoute>} />
       <Route path="/architect" element={<ProtectedRoute><ArchitectQueuePage /></ProtectedRoute>} />
+      <Route path="/metrics" element={<ProtectedRoute><MetricsPage /></ProtectedRoute>} />
       <Route path="/audit" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
       <Route path="/admin/policies" element={<ProtectedRoute><PoliciesPage /></ProtectedRoute>} />
       <Route path="/admin/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
