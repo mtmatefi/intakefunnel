@@ -31,6 +31,31 @@ export function useApproval(intakeId: string | undefined) {
   });
 }
 
+async function notifySculptor(intakeId: string) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const resp = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/notify-sculptor`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ intake_id: intakeId }),
+      }
+    );
+    const result = await resp.json();
+    console.log('Sculptor notification result:', result);
+    return result;
+  } catch (err) {
+    console.warn('Failed to notify Strategy Sculptor (non-blocking):', err);
+  }
+}
+
 export function useCreateApproval() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -79,12 +104,16 @@ export function useCreateApproval() {
         metadata_json: { decision: params.decision, comments: params.comments },
       });
 
+      // Fire-and-forget: notify Strategy Sculptor via callback webhook
+      notifySculptor(params.intakeId);
+
       return data;
     },
     onSuccess: (_, params) => {
       queryClient.invalidateQueries({ queryKey: ['approval', params.intakeId] });
       queryClient.invalidateQueries({ queryKey: ['intake', params.intakeId] });
       queryClient.invalidateQueries({ queryKey: ['intakes'] });
+      queryClient.invalidateQueries({ queryKey: ['initiative-links', params.intakeId] });
     },
   });
 }
