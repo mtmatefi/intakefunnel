@@ -354,6 +354,7 @@ export default function InnovationsPage() {
   const { workspace } = useWorkspace();
   const { data: innovations = [], isLoading, refetch } = useInnovations(workspace?.id);
   const fetchFromSculptor = useFetchInnovationsFromSculptor();
+  const { getUnreadForInnovation, markAsRead } = useUnreadFeedback();
   const [selectedInnovation, setSelectedInnovation] = useState<SyncedInnovation | null>(null);
   const [filterStage, setFilterStage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
