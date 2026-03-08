@@ -534,10 +534,18 @@ export function IntakeWizard() {
                     answers['current_process']?.substring(0, 100) ||
                     `Intake ${new Date().toLocaleDateString()}`;
       
+      // Use classification as category if available
+      const classificationLabel = classification ? {
+        initiative: 'Initiative',
+        value_stream_epic: 'Value Stream Epic',
+        epic: 'Epic',
+        feature: 'Feature',
+      }[classification] : undefined;
+
       const intake = await createIntake.mutateAsync({
         title,
         valueStream: answers['value_stream'] || undefined,
-        category: answers['category'] || undefined,
+        category: classificationLabel || answers['category'] || undefined,
       });
 
       console.log('Created intake:', intake.id);
