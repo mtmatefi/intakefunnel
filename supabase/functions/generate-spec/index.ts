@@ -239,6 +239,23 @@ serve(async (req) => {
     console.log("Generating spec for intake:", intakeId);
     console.log("Transcript length:", formattedTranscript.length);
 
+    // Fetch active compliance guidelines to inject into spec generation
+    const { data: guidelines } = await supabase
+      .from("guidelines")
+      .select("name, type, compliance_framework, severity, content_markdown, risk_categories")
+      .eq("is_active", true)
+      .order("severity", { ascending: true });
+
+    let guidelinesContext = "";
+    if (guidelines && guidelines.length > 0) {
+      guidelinesContext = `\n\n## AKTIVE COMPLIANCE-GUIDELINES (MÜSSEN BEWERTET WERDEN)\n\nFolgende Guidelines sind im Unternehmen aktiv. Bewerte für jede relevante Guideline, ob sie auf diesen Intake zutrifft und welche Maßnahmen erforderlich sind:\n\n`;
+      for (const g of guidelines) {
+        guidelinesContext += `### [${g.compliance_framework?.toUpperCase()}] ${g.name} (Schweregrad: ${g.severity})\nTyp: ${g.type}\n${g.content_markdown?.substring(0, 500)}...\n\n`;
+      }
+    }
+
+    const systemPrompt = baseSystemPrompt + guidelinesContext;
+
     // Call Lovable AI with tool calling for structured output
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -250,7 +267,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Here is the interview transcript:\n\n${formattedTranscript}\n\nPlease analyze this and generate a structured specification.` },
+          { role: "user", content: `Here is the interview transcript:\n\n${formattedTranscript}\n\nPlease analyze this and generate a structured specification. Include a compliance assessment for all applicable guidelines.` },
         ],
         tools: [
           {
