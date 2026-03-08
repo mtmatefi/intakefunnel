@@ -212,6 +212,56 @@ export type Database = {
           },
         ]
       }
+      initiative_intake_links: {
+        Row: {
+          created_at: string
+          id: string
+          initiative_data: Json | null
+          initiative_id: string
+          initiative_title: string
+          intake_id: string | null
+          last_synced_at: string | null
+          source_app: string
+          sync_status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initiative_data?: Json | null
+          initiative_id: string
+          initiative_title: string
+          intake_id?: string | null
+          last_synced_at?: string | null
+          source_app?: string
+          sync_status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initiative_data?: Json | null
+          initiative_id?: string
+          initiative_title?: string
+          intake_id?: string | null
+          last_synced_at?: string | null
+          source_app?: string
+          sync_status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_intake_links_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: false
+            referencedRelation: "intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intakes: {
         Row: {
           category: string | null

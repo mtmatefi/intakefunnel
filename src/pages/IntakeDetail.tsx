@@ -25,6 +25,7 @@ import { FollowupDialog } from '@/components/spec/FollowupDialog';
 import { JiraSyncPanel } from '@/components/jira/JiraSyncPanel';
 import { ImpactScoreCard } from '@/components/intake/ImpactScoreCard';
 import { ApprovalDialog } from '@/components/intake/ApprovalDialog';
+import { InitiativeLinkCard } from '@/components/intake/InitiativeLinkCard';
 
 export default function IntakeDetailPage() {
   const { id } = useParams();
@@ -218,6 +219,9 @@ export default function IntakeDetailPage() {
         {id && (intake.jpd_issue_key || jiraExport) && (
           <JiraSyncPanel intakeId={id} jpdIssueKey={intake.jpd_issue_key} autoRefreshInterval={30000} />
         )}
+
+        {/* Initiative Links from Strategy Sculptor */}
+        {id && <InitiativeLinkCard intakeId={id} />}
 
         {/* Impact Score */}
         {id && <ImpactScoreCard intakeId={id} />}
