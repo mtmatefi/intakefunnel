@@ -33,6 +33,7 @@ import {
   Globe,
   Wrench,
   Building2,
+  Link2,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
