@@ -11,6 +11,7 @@ import { ComplianceStats } from '@/components/compliance/ComplianceStats';
 import { GuidelineCard } from '@/components/compliance/GuidelineCard';
 import { GuidelineEditorDialog } from '@/components/compliance/GuidelineEditorDialog';
 import { GuidelineChatCreator } from '@/components/compliance/GuidelineChatCreator';
+import { GuidelineVersionHistory } from '@/components/compliance/GuidelineVersionHistory';
 import { useVersionedGuidelineUpdate } from '@/hooks/useGuidelineVersions';
 import {
   useGuidelines,
@@ -40,6 +41,7 @@ export default function PoliciesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState(false);
   const [chatEditGuideline, setChatEditGuideline] = useState<Guideline | null>(null);
+  const [historyGuideline, setHistoryGuideline] = useState<Guideline | null>(null);
 
   const { data: guidelines = [], isLoading } = useGuidelines();
   const createMutation = useCreateGuideline();
@@ -225,6 +227,7 @@ export default function PoliciesPage() {
                   guideline={g}
                   onEdit={(g) => { setEditingGuideline(g); setEditorOpen(true); }}
                   onChatEdit={(g) => { setChatEditGuideline(g); }}
+                  onShowHistory={(g) => { setHistoryGuideline(g); }}
                   onDelete={setDeleteId}
                   onToggleActive={handleToggleActive}
                 />
@@ -261,6 +264,14 @@ export default function PoliciesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Version History */}
+      <GuidelineVersionHistory
+        guidelineId={historyGuideline?.id}
+        guidelineName={historyGuideline?.name || ''}
+        open={!!historyGuideline}
+        onOpenChange={(open) => !open && setHistoryGuideline(null)}
+      />
     </AppLayout>
   );
 }
