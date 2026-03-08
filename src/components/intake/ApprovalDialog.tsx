@@ -187,9 +187,10 @@ export function ApprovalDialog({ intakeId, intakeTitle, routingPath }: ApprovalD
           >
             {createApproval.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <decisionConfig[decision].icon className="mr-2 h-4 w-4" />
-            )}
+            ) : (() => {
+              const Icon = decisionConfig[decision].icon;
+              return <Icon className="mr-2 h-4 w-4" />;
+            })()}
             {decisionConfig[decision].label}
           </Button>
         </div>
