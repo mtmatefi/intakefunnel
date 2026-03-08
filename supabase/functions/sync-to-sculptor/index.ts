@@ -84,20 +84,22 @@ Deno.serve(async (req) => {
 
       // Call Sculptor's workspace-sync endpoint
       const syncUrl = `${sculptorUrl}/functions/v1/workspace-sync`;
+      console.log("Calling Sculptor sync:", syncUrl, "for workspace:", ws.name);
       const resp = await fetch(syncUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-sync-secret": syncSecret,
+        },
         body: JSON.stringify({
           action: "create_workspace",
-          sync_secret: syncSecret,
-          workspace: {
-            id: ws.id,
-            name: ws.name,
-            description: ws.description,
-          },
-          members: memberEmails,
+          workspace_name: ws.name,
+          workspace_description: ws.description,
+          external_workspace_id: ws.id,
+          member_emails: memberEmails.map((m) => m.email),
         }),
       });
+      console.log("Sculptor response status:", resp.status);
 
       const result = await resp.json();
 
