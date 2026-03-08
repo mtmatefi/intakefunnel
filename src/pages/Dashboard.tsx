@@ -188,14 +188,15 @@ export default function DashboardPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[300px]">Titel</TableHead>
+                    <TableHead className="min-w-[200px] sm:w-[300px]">Titel</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Priorität</TableHead>
-                    <TableHead>WSJF</TableHead>
-                    <TableHead>Aktualisiert</TableHead>
+                    <TableHead className="hidden sm:table-cell">Priorität</TableHead>
+                    <TableHead className="hidden md:table-cell">WSJF</TableHead>
+                    <TableHead className="hidden md:table-cell">Aktualisiert</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
