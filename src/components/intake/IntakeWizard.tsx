@@ -214,7 +214,20 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
     return t(`category.${cat}`);
   };
 
-  // Check for saved state on mount
+  // Skip to the first unanswered question
+  const skipToFirstUnanswered = () => {
+    for (const cat of categories) {
+      const catQs = interviewQuestions.filter(q => q.category === cat);
+      const firstUnansweredIdx = catQs.findIndex(q => !answers[q.key]);
+      if (firstUnansweredIdx >= 0) {
+        setCurrentCategory(cat);
+        setCurrentQuestionIndex(firstUnansweredIdx);
+        return;
+      }
+    }
+  };
+
+
   useEffect(() => {
     if (!innovationContext && !hasRestoredRef.current && hasSavedState()) {
       setShowRestoreDialog(true);
