@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useInnovations, useInnovationFeedback, useAddInnovationFeedback } from "@/hooks/useInnovations";
+import { useInnovations, useInnovationFeedback, useAddInnovationFeedback, useFetchInnovationsFromSculptor } from "@/hooks/useInnovations";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import {
   Clock,
   User,
   ArrowRight,
+  RefreshCw,
 } from "lucide-react";
 import type { SyncedInnovation } from "@/hooks/useInnovations";
 
@@ -310,9 +311,19 @@ function InnovationDetailDialog({
 
 export default function InnovationsPage() {
   const { workspace } = useWorkspace();
-  const { data: innovations = [], isLoading } = useInnovations(workspace?.id);
+  const { data: innovations = [], isLoading, refetch } = useInnovations(workspace?.id);
+  const fetchFromSculptor = useFetchInnovationsFromSculptor();
   const [selectedInnovation, setSelectedInnovation] = useState<SyncedInnovation | null>(null);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
+
+  // Auto-fetch from Sculptor when page loads and workspace is linked
+  useEffect(() => {
+    if (workspace?.id && (workspace as any).external_workspace_id) {
+      fetchFromSculptor.mutate(workspace.id, {
+        onSuccess: () => refetch(),
+      });
+    }
+  }, [workspace?.id]);
 
   const stages = Object.entries(stageConfig);
   const filtered = stageFilter
@@ -327,11 +338,27 @@ export default function InnovationsPage() {
   return (
     <AppLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-serif font-bold">Innovationen</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Innovations-Pipeline aus dem Strategy Sculptor – read-only mit Feedback-Möglichkeit
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-serif font-bold">Innovationen</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Innovations-Pipeline aus dem Strategy Sculptor – read-only mit Feedback-Möglichkeit
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={fetchFromSculptor.isPending}
+            onClick={() => {
+              if (workspace?.id) {
+                fetchFromSculptor.mutate(workspace.id, { onSuccess: () => refetch() });
+              }
+            }}
+          >
+            <RefreshCw className={`h-4 w-4 ${fetchFromSculptor.isPending ? "animate-spin" : ""}`} />
+            {fetchFromSculptor.isPending ? "Synchronisiere..." : "Aktualisieren"}
+          </Button>
         </div>
 
         {/* Stage Filter */}
