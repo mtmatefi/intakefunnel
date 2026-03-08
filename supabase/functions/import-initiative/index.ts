@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
       initiative_data,
       create_intake,
       intake_defaults,
+      callback_url,
     } = body;
 
     // Validate required fields
