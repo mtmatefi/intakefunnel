@@ -538,7 +538,7 @@ export default function InnovationsPage() {
                     </div>
                   ) : (
                     (byStage[stage] ?? []).map((inn) => (
-                      <InnovationCard key={inn.id} innovation={inn} onClick={() => setSelectedInnovation(inn)} />
+                      <InnovationCard key={inn.id} innovation={inn} onClick={() => setSelectedInnovation(inn)} unreadCount={getUnreadForInnovation(inn.id)} />
                     ))
                   )}
                 </div>
