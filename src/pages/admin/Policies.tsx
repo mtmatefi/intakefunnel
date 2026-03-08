@@ -44,6 +44,7 @@ export default function PoliciesPage() {
   const { data: guidelines = [], isLoading } = useGuidelines();
   const createMutation = useCreateGuideline();
   const updateMutation = useUpdateGuideline();
+  const versionedUpdate = useVersionedGuidelineUpdate();
   const deleteMutation = useDeleteGuideline();
 
   if (!user || (user.role !== 'admin' && user.role !== 'architect')) {
