@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.jira-sync]
 verify_jwt = false
+
+[functions.import-initiative]
+verify_jwt = false
