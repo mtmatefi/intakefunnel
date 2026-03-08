@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.chat-guideline]
 verify_jwt = false
+
+[functions.coach-interview]
+verify_jwt = false
