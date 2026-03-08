@@ -64,6 +64,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, isImpersonating, switchRole, stopImpersonating, logout } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   if (!user) {
     return <>{children}</>;
@@ -75,8 +76,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     logout();
     navigate("/login");
   };
-
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
