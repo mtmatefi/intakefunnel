@@ -1,13 +1,16 @@
 import { useState } from "react";
 import type { WorkItemTree } from "@/hooks/useWorkItems";
+import { useTranslateWorkItems } from "@/hooks/useWorkItems";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   ChevronDown, ChevronRight, ExternalLink, GitBranch,
   CheckCircle2, ListChecks, ShieldCheck, Gauge, Target, X,
+  Languages, Loader2,
 } from "lucide-react";
 
 const ITEM_TYPE_ICONS: Record<string, string> = { epic: "📦", feature: "✨", story: "📝" };
