@@ -193,7 +193,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       title={sidebarCollapsed ? item.name : undefined}
                     >
                       <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-                      {!sidebarCollapsed && <span>{item.name}</span>}
+                      {!sidebarCollapsed && <span className="flex-1">{item.name}</span>}
+                      {!sidebarCollapsed && item.href === "/innovations" && totalUnread > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5">
+                          {totalUnread}
+                        </span>
+                      )}
+                      {sidebarCollapsed && item.href === "/innovations" && totalUnread > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold px-1">
+                          {totalUnread}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
