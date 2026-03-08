@@ -139,6 +139,7 @@ export function useJiraExport(intakeId: string | undefined) {
 export function useCreateIntake() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
 
   return useMutation({
     mutationFn: async ({ title, valueStream, category }: { 
@@ -147,12 +148,14 @@ export function useCreateIntake() {
       category?: string;
     }) => {
       if (!user) throw new Error('User must be logged in');
+      if (!workspace) throw new Error('No workspace selected');
       
       const { data, error } = await supabase
         .from('intakes')
         .insert({
           title,
           requester_id: user.id,
+          workspace_id: workspace.id,
           value_stream: valueStream || null,
           category: category || null,
           status: 'gathering_info',
