@@ -256,11 +256,11 @@ export default function IntakeDetailPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="spec" className="gap-2"><FileText className="h-4 w-4" />Spezifikation</TabsTrigger>
-            <TabsTrigger value="chat" className="gap-2"><MessageSquare className="h-4 w-4" />Chat</TabsTrigger>
-            <TabsTrigger value="transcript" className="gap-2"><History className="h-4 w-4" />Transkript</TabsTrigger>
-            <TabsTrigger value="routing" className="gap-2"><Route className="h-4 w-4" />Routing</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4">
+            <TabsTrigger value="spec" className="gap-1 sm:gap-2 text-xs sm:text-sm"><FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Spezifikation</span><span className="sm:hidden">Spec</span></TabsTrigger>
+            <TabsTrigger value="chat" className="gap-1 sm:gap-2 text-xs sm:text-sm"><MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />Chat</TabsTrigger>
+            <TabsTrigger value="transcript" className="gap-1 sm:gap-2 text-xs sm:text-sm"><History className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Transkript</span><span className="sm:hidden">Log</span></TabsTrigger>
+            <TabsTrigger value="routing" className="gap-1 sm:gap-2 text-xs sm:text-sm"><Route className="h-3.5 w-3.5 sm:h-4 sm:w-4" />Routing</TabsTrigger>
           </TabsList>
 
           {/* Specification Tab */}
