@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInnovations, useInnovationFeedback, useAddInnovationFeedback, useFetchInnovationsFromSculptor } from "@/hooks/useInnovations";
+import { useUnreadFeedback } from "@/hooks/useUnreadFeedback";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 // ── Innovation Card ──
-function InnovationCard({ innovation, onClick }: { innovation: SyncedInnovation; onClick: () => void }) {
+function InnovationCard({ innovation, onClick, unreadCount }: { innovation: SyncedInnovation; onClick: () => void; unreadCount: number }) {
   const daysAge = Math.floor((Date.now() - new Date(innovation.updated_at).getTime()) / 86_400_000);
   const isImplement = innovation.stage === "implement";
 
@@ -61,10 +62,15 @@ function InnovationCard({ innovation, onClick }: { innovation: SyncedInnovation;
     <div
       onClick={onClick}
       className={cn(
-        "group rounded-lg border bg-card/40 hover:bg-card/70 p-2.5 cursor-pointer transition-all",
+        "group relative rounded-lg border bg-card/40 hover:bg-card/70 p-2.5 cursor-pointer transition-all",
         isImplement ? "border-emerald-500/30 hover:border-emerald-500/50" : "border-border/50 hover:border-primary/30"
       )}
     >
+      {unreadCount > 0 && (
+        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1 z-10">
+          {unreadCount}
+        </span>
+      )}
       <div className="flex items-center gap-2">
         <div className={cn("h-2 w-2 rounded-full shrink-0", STATUS_DOT[innovation.status ?? "yellow"] || "bg-muted")} />
         <h4 className="text-xs font-medium text-foreground leading-tight line-clamp-1 flex-1">{innovation.title}</h4>
@@ -93,15 +99,26 @@ function InnovationDetailSheet({
   innovation,
   open,
   onClose,
+  onMarkRead,
 }: {
   innovation: SyncedInnovation | null;
   open: boolean;
   onClose: () => void;
+  onMarkRead?: (id: string) => void;
 }) {
   const navigate = useNavigate();
   const { data: feedback = [] } = useInnovationFeedback(innovation?.id);
   const addFeedback = useAddInnovationFeedback();
   const [comment, setComment] = useState("");
+
+  // Mark as read when sheet opens
+  useEffect(() => {
+    if (open && innovation?.id && onMarkRead) {
+      onMarkRead(innovation.id);
+    }
+  }, [open, innovation?.id]);
+
+  if (!innovation) return null;
 
   if (!innovation) return null;
 
@@ -337,6 +354,7 @@ export default function InnovationsPage() {
   const { workspace } = useWorkspace();
   const { data: innovations = [], isLoading, refetch } = useInnovations(workspace?.id);
   const fetchFromSculptor = useFetchInnovationsFromSculptor();
+  const { getUnreadForInnovation, markAsRead } = useUnreadFeedback();
   const [selectedInnovation, setSelectedInnovation] = useState<SyncedInnovation | null>(null);
   const [filterStage, setFilterStage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -520,7 +538,7 @@ export default function InnovationsPage() {
                     </div>
                   ) : (
                     (byStage[stage] ?? []).map((inn) => (
-                      <InnovationCard key={inn.id} innovation={inn} onClick={() => setSelectedInnovation(inn)} />
+                      <InnovationCard key={inn.id} innovation={inn} onClick={() => setSelectedInnovation(inn)} unreadCount={getUnreadForInnovation(inn.id)} />
                     ))
                   )}
                 </div>
@@ -582,6 +600,7 @@ export default function InnovationsPage() {
           innovation={selectedInnovation}
           open={!!selectedInnovation}
           onClose={() => setSelectedInnovation(null)}
+          onMarkRead={(id) => markAsRead.mutate(id)}
         />
       </div>
     </AppLayout>

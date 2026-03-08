@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useUnreadFeedback } from "@/hooks/useUnreadFeedback";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -117,6 +118,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user, isAdmin, isImpersonating, switchRole, stopImpersonating, logout } = useAuth();
   const { workspace, workspaces, setWorkspace } = useWorkspace();
+  const { totalUnread } = useUnreadFeedback();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -182,7 +184,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       to={item.href}
                       onClick={onLinkClick}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] transition-colors duration-150",
+                        "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] transition-colors duration-150",
                         sidebarCollapsed && "justify-center px-2",
                         isActive
                           ? "bg-secondary text-foreground font-medium"
@@ -191,7 +193,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       title={sidebarCollapsed ? item.name : undefined}
                     >
                       <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-                      {!sidebarCollapsed && <span>{item.name}</span>}
+                      {!sidebarCollapsed && <span className="flex-1">{item.name}</span>}
+                      {!sidebarCollapsed && item.href === "/innovations" && totalUnread > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5">
+                          {totalUnread}
+                        </span>
+                      )}
+                      {sidebarCollapsed && item.href === "/innovations" && totalUnread > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold px-1">
+                          {totalUnread}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -340,8 +352,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors">
                 <Globe className="h-[18px] w-[18px]" />
               </button>
-              <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors">
+              <button
+                className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                onClick={() => navigate("/innovations")}
+                title="Ungelesene Kommentare"
+              >
                 <Bell className="h-[18px] w-[18px]" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
+                    {totalUnread}
+                  </span>
+                )}
               </button>
 
               {/* User Menu */}

@@ -425,6 +425,35 @@ export type Database = {
           },
         ]
       }
+      innovation_feedback_reads: {
+        Row: {
+          id: string
+          innovation_id: string
+          last_read_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          innovation_id: string
+          last_read_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          innovation_id?: string
+          last_read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "innovation_feedback_reads_innovation_id_fkey"
+            columns: ["innovation_id"]
+            isOneToOne: false
+            referencedRelation: "synced_innovations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intakes: {
         Row: {
           category: string | null
