@@ -26,6 +26,7 @@ import { JiraSyncPanel } from '@/components/jira/JiraSyncPanel';
 import { ImpactScoreCard } from '@/components/intake/ImpactScoreCard';
 import { ApprovalDialog } from '@/components/intake/ApprovalDialog';
 import { InitiativeLinkCard } from '@/components/intake/InitiativeLinkCard';
+import { IntakeChat } from '@/components/intake/IntakeChat';
 
 export default function IntakeDetailPage() {
   const { id } = useParams();
