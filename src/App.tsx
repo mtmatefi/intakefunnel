@@ -27,6 +27,7 @@ import TutorialsPage from "./pages/Tutorials";
 import NotFound from "./pages/NotFound";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
 import PlatformAdmin from "./pages/PlatformAdmin";
+import InnovationsPage from "./pages/Innovations";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ function AppRoutes() {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/tutorials" element={<ProtectedRoute><TutorialsPage /></ProtectedRoute>} />
         <Route path="/platform-admin" element={<ProtectedRoute><PlatformAdmin /></ProtectedRoute>} />
+        <Route path="/innovations" element={<ProtectedRoute><InnovationsPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <GlobalTutorialOverlay />
