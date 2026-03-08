@@ -778,31 +778,37 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          deleted_at: string | null
           description: string | null
           external_source: string | null
           external_workspace_id: string | null
           id: string
           name: string
+          status: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
           description?: string | null
           external_source?: string | null
           external_workspace_id?: string | null
           id?: string
           name: string
+          status?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
           description?: string | null
           external_source?: string | null
           external_workspace_id?: string | null
           id?: string
           name?: string
+          status?: string
           updated_at?: string
         }
         Relationships: []
