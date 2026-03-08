@@ -167,12 +167,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         .eq("id", workspaceId);
       if (error) throw error;
       await loadWorkspaces();
+      notifySculptorWorkspaceEvent(workspaceId, "restored");
       return true;
     } catch (err) {
       console.error("Restore failed:", err);
       return false;
     }
-  }, [loadWorkspaces]);
+  }, [loadWorkspaces, notifySculptorWorkspaceEvent]);
 
   const permanentlyDelete = useCallback(async (workspaceId: string): Promise<boolean> => {
     try {
