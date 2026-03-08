@@ -34,6 +34,7 @@ import {
   Wrench,
   Building2,
   ChevronsUpDown,
+  Plus,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
