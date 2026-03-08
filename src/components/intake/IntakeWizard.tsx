@@ -81,7 +81,60 @@ interface AIValidation {
 
 type IntakeClassification = 'initiative' | 'value_stream_epic' | 'epic' | 'feature' | null;
 
-export function IntakeWizard() {
+interface InnovationContext {
+  id: string;
+  externalId: string;
+  title: string;
+  description?: string;
+  hypothesis?: string;
+  valueProposition?: string;
+  expectedOutcome?: string;
+  effortEstimate?: string;
+  responsible?: string;
+  learnings?: string;
+  targetDate?: string;
+  impactData?: any[];
+  riskData?: any[];
+  trendData?: any[];
+}
+
+function buildPrefilledAnswers(ctx: InnovationContext): Record<string, string> {
+  const prefilled: Record<string, string> = {};
+  
+  // problem_statement: combine description + hypothesis
+  const parts: string[] = [];
+  if (ctx.description) parts.push(ctx.description);
+  if (ctx.hypothesis) parts.push(`Hypothese: ${ctx.hypothesis}`);
+  if (parts.length > 0) prefilled['problem_statement'] = parts.join('\n\n');
+  
+  // goals: expected outcome + value proposition
+  const goalParts: string[] = [];
+  if (ctx.expectedOutcome) goalParts.push(ctx.expectedOutcome);
+  if (ctx.valueProposition) goalParts.push(`Value Proposition: ${ctx.valueProposition}`);
+  if (goalParts.length > 0) prefilled['goals'] = goalParts.join('\n\n');
+  
+  // pain_points from learnings
+  if (ctx.learnings) prefilled['pain_points'] = ctx.learnings;
+  
+  // users_primary from responsible
+  if (ctx.responsible) prefilled['users_primary'] = `Verantwortlich: ${ctx.responsible}`;
+  
+  // timeline from target date + effort
+  const timeParts: string[] = [];
+  if (ctx.targetDate) timeParts.push(`Zieldatum: ${new Date(ctx.targetDate).toLocaleDateString('de-DE')}`);
+  if (ctx.effortEstimate) timeParts.push(`Geschätzter Aufwand: ${ctx.effortEstimate}`);
+  if (timeParts.length > 0) prefilled['timeline'] = timeParts.join('\n');
+  
+  // risks → regulatory_requirements
+  if (ctx.riskData && ctx.riskData.length > 0) {
+    prefilled['regulatory_requirements'] = 'Identifizierte Risiken aus Innovation:\n' + 
+      ctx.riskData.map((r: any) => `- ${r.title || r.name}: ${r.description || ''}`).join('\n');
+  }
+  
+  return prefilled;
+}
+
+export function IntakeWizard({ innovationContext }: { innovationContext?: InnovationContext | null }) {
   const navigate = useNavigate();
   const { language, t } = useLanguage();
   const { user } = useAuth();
@@ -93,9 +146,12 @@ export function IntakeWizard() {
   const generateSpec = useGenerateSpec();
   const [isSaving, setIsSaving] = useState(false);
   
+  // Pre-fill from innovation context
+  const prefilledAnswers = innovationContext ? buildPrefilledAnswers(innovationContext) : {};
+  
   const [currentCategory, setCurrentCategory] = useState<string>('problem');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(prefilledAnswers);
   const [enrichedAnswers, setEnrichedAnswers] = useState<Record<string, string>>({});
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -111,6 +167,7 @@ export function IntakeWizard() {
   const [confirmedInitiatives, setConfirmedInitiatives] = useState<MatchedInitiative[]>([]);
   const [pendingAdaptiveQuestions, setPendingAdaptiveQuestions] = useState<AdaptiveQuestion[]>([]);
   const [userClassificationOverride, setUserClassificationOverride] = useState<IntakeClassification>(null);
+  const [innovationPrefillShown, setInnovationPrefillShown] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasRestoredRef = useRef(false);
 
