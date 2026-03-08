@@ -33,6 +33,7 @@ import {
   Globe,
   Wrench,
   Building2,
+  Link2,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
@@ -268,18 +269,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <Button variant="ghost" size="sm" className="text-muted-foreground gap-2">
                       <Building2 className="h-4 w-4" />
                       <span className="hidden sm:inline">{workspace.name}</span>
+                      {(workspace as any).external_workspace_id && (
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 gap-1 bg-primary/10 text-primary border-primary/20 hidden sm:inline-flex">
+                          <Link2 className="h-2.5 w-2.5" /> Sculptor
+                        </Badge>
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="bg-card border-border">
-                    {workspaces.map((ws) => (
-                      <DropdownMenuItem
-                        key={ws.id}
-                        onClick={() => setWorkspace(ws)}
-                        className={cn(ws.id === workspace.id && "text-primary")}
-                      >
-                        {ws.name}
-                      </DropdownMenuItem>
-                    ))}
+                    {workspaces.map((ws) => {
+                      const linked = !!(ws as any).external_workspace_id;
+                      return (
+                        <DropdownMenuItem
+                          key={ws.id}
+                          onClick={() => setWorkspace(ws)}
+                          className={cn(ws.id === workspace.id && "text-primary")}
+                        >
+                          <span className="flex-1">{ws.name}</span>
+                          {linked && (
+                            <Badge variant="secondary" className="ml-2 text-[9px] px-1 py-0 bg-primary/10 text-primary border-primary/20">
+                              <Link2 className="h-2.5 w-2.5" />
+                            </Badge>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate("/workspace")}>
                       Workspace verwalten
