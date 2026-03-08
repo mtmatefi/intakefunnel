@@ -294,6 +294,57 @@ function InnovationDetailSheet({
 
           <Separator />
 
+          {/* Work Items (Epics/Features/Stories) */}
+          <div>
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5">
+              <GitBranch className="h-4 w-4" /> Epics, Features & Stories
+            </h4>
+            {wiLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Laden...
+              </div>
+            ) : workItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground/60 italic">Keine Work Items vom Sculptor synchronisiert.</p>
+            ) : (
+              <>
+                <WorkItemTreeView items={workItemTree} />
+                {/* Jira Export */}
+                {workItems.some(wi => !wi.jira_issue_key) && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <Input
+                      placeholder="Jira Project Key (z.B. PROJ)"
+                      value={jiraProjectKey}
+                      onChange={(e) => setJiraProjectKey(e.target.value.toUpperCase())}
+                      className="flex-1 h-8 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!jiraProjectKey.trim() || exportToJira.isPending}
+                      onClick={async () => {
+                        try {
+                          const result = await exportToJira.mutateAsync({ innovationId: innovation.id, projectKey: jiraProjectKey.trim() });
+                          toast.success(`${result.exported_count} Items nach Jira exportiert`);
+                        } catch {
+                          toast.error("Jira-Export fehlgeschlagen");
+                        }
+                      }}
+                      className="gap-1.5 text-xs h-8"
+                    >
+                      {exportToJira.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+                      Nach Jira exportieren
+                    </Button>
+                  </div>
+                )}
+                {workItems.every(wi => !!wi.jira_issue_key) && (
+                  <p className="text-xs text-primary mt-2">✓ Alle Items nach Jira exportiert</p>
+                )}
+              </>
+            )}
+          </div>
+
+          <Separator />
+
           {/* Intake Button – only for implement stage */}
           {isImplement ? (
             <Button onClick={handleCreateIntake} className="w-full gap-2">
