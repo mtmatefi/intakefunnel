@@ -128,9 +128,16 @@ export default function PoliciesPage() {
               });
             }}
             onUpdate={(data) => {
-              updateMutation.mutate(data as any, {
+              const { id, ...updates } = data;
+              versionedUpdate.mutate({
+                guidelineId: id,
+                updates,
+                changedBy: user.id,
+                changeReason: 'Chat-basierte Überarbeitung',
+                changeSource: 'guideline_chat',
+              }, {
                 onSuccess: () => {
-                  toast.success('Guideline per Chat aktualisiert!');
+                  toast.success('Guideline per Chat aktualisiert (versioniert)!');
                   setChatMode(false);
                   setChatEditGuideline(null);
                 },
