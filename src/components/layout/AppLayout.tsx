@@ -58,6 +58,7 @@ const navSections: NavSection[] = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["requester", "architect", "engineer_lead", "admin"] },
       { name: "Neuer Intake", href: "/intake/new", icon: PlusCircle, roles: ["requester", "architect", "admin"] },
+      { name: "Innovationen", href: "/innovations", icon: Lightbulb, roles: ["requester", "architect", "engineer_lead", "admin"] },
     ],
   },
   {

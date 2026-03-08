@@ -94,6 +94,7 @@ function AppRoutes() {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/tutorials" element={<ProtectedRoute><TutorialsPage /></ProtectedRoute>} />
         <Route path="/platform-admin" element={<ProtectedRoute><PlatformAdmin /></ProtectedRoute>} />
+        <Route path="/innovations" element={<ProtectedRoute><InnovationsPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <GlobalTutorialOverlay />
