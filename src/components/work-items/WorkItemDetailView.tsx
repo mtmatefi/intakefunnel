@@ -105,21 +105,29 @@ function DetailPanel({ item, onTranslate, isTranslating }: { item: WorkItemTree;
       <div className="p-5 space-y-5">
         {/* Header */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-lg">{ITEM_TYPE_ICONS[item.item_type]}</span>
-            <Badge variant="outline" className="text-xs">{ITEM_TYPE_LABELS[item.item_type]}</Badge>
-            {item.priority && (
-              <Badge variant="secondary" className={cn("text-xs", PRIORITY_COLORS[item.priority] || "")}>
-                {item.priority}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-lg">{ITEM_TYPE_ICONS[item.item_type]}</span>
+              <Badge variant="outline" className="text-xs">{ITEM_TYPE_LABELS[item.item_type]}</Badge>
+              {item.priority && (
+                <Badge variant="secondary" className={cn("text-xs", PRIORITY_COLORS[item.priority] || "")}>
+                  {item.priority}
+                </Badge>
+              )}
+              <Badge variant="secondary" className={cn("text-xs", STATUS_COLORS[item.status] || "")}>
+                {item.status}
               </Badge>
-            )}
-            <Badge variant="secondary" className={cn("text-xs", STATUS_COLORS[item.status] || "")}>
-              {item.status}
-            </Badge>
-            {item.story_points != null && (
-              <Badge variant="outline" className="text-xs">
-                {item.story_points} Story Points
-              </Badge>
+              {item.story_points != null && (
+                <Badge variant="outline" className="text-xs">
+                  {item.story_points} Story Points
+                </Badge>
+              )}
+            </div>
+            {onTranslate && (
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs shrink-0" onClick={onTranslate} disabled={isTranslating}>
+                {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                EN
+              </Button>
             )}
           </div>
           <h2 className="text-base font-semibold text-foreground leading-snug">{item.title}</h2>
