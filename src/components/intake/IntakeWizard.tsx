@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { interviewQuestions } from '@/data/demo';
 import type { InterviewQuestion, TranscriptMessage } from '@/types/intake';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,12 @@ import {
   Check,
   Plus,
   X,
+  Target,
+  Link2,
+  TrendingUp,
+  Layers,
+  Zap,
+  GitBranch,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,6 +52,18 @@ import {
 
 const categories = ['problem', 'users', 'data', 'integrations', 'ux', 'nfr', 'compliance'] as const;
 
+interface MatchedInitiative {
+  initiative_id: string;
+  initiative_title: string;
+  match_score: 'high' | 'medium' | 'low';
+  match_reason: string;
+}
+
+interface AdaptiveQuestion {
+  question: string;
+  reason: string;
+}
+
 interface AIValidation {
   isComplete: boolean;
   quality: 'excellent' | 'good' | 'needs_improvement' | 'insufficient';
@@ -52,7 +71,15 @@ interface AIValidation {
   suggestions: string[];
   enrichedAnswer: string | null;
   missingAspects: string[];
+  complianceFlags?: string[];
+  classifiedType: 'initiative' | 'value_stream_epic' | 'epic' | 'feature' | null;
+  classificationConfidence: 'high' | 'medium' | 'low' | null;
+  classificationReason: string | null;
+  matchedInitiatives: MatchedInitiative[];
+  adaptiveQuestions: AdaptiveQuestion[];
 }
+
+type IntakeClassification = 'initiative' | 'value_stream_epic' | 'epic' | 'feature' | null;
 
 export function IntakeWizard() {
   const navigate = useNavigate();
@@ -77,6 +104,13 @@ export function IntakeWizard() {
   const [pendingFollowUp, setPendingFollowUp] = useState<string | null>(null);
   const [currentValidation, setCurrentValidation] = useState<AIValidation | null>(null);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [classification, setClassification] = useState<IntakeClassification>(null);
+  const [classificationConfidence, setClassificationConfidence] = useState<string | null>(null);
+  const [classificationReason, setClassificationReason] = useState<string | null>(null);
+  const [matchedInitiatives, setMatchedInitiatives] = useState<MatchedInitiative[]>([]);
+  const [confirmedInitiatives, setConfirmedInitiatives] = useState<MatchedInitiative[]>([]);
+  const [pendingAdaptiveQuestions, setPendingAdaptiveQuestions] = useState<AdaptiveQuestion[]>([]);
+  const [userClassificationOverride, setUserClassificationOverride] = useState<IntakeClassification>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasRestoredRef = useRef(false);
 
@@ -290,7 +324,32 @@ export function IntakeWizard() {
       setEnrichedAnswers(prev => ({ ...prev, [currentQuestion.key]: validation.enrichedAnswer! }));
     }
 
-    // Show quality feedback if available
+    // Update classification from AI
+    if (validation) {
+      if (validation.classifiedType && !userClassificationOverride) {
+        setClassification(validation.classifiedType);
+        setClassificationConfidence(validation.classificationConfidence);
+        setClassificationReason(validation.classificationReason);
+      }
+
+      // Update matched initiatives
+      if (validation.matchedInitiatives?.length > 0) {
+        setMatchedInitiatives(prev => {
+          const existingIds = prev.map(m => m.initiative_id);
+          const newMatches = validation.matchedInitiatives.filter(
+            (m: MatchedInitiative) => !existingIds.includes(m.initiative_id)
+          );
+          return [...prev, ...newMatches];
+        });
+      }
+
+      // Queue adaptive questions
+      if (validation.adaptiveQuestions?.length > 0) {
+        setPendingAdaptiveQuestions(prev => [...prev, ...validation.adaptiveQuestions]);
+      }
+    }
+
+    // Show quality feedback + classification + matches
     if (validation) {
       const qualityEmoji = {
         excellent: '✨',
@@ -300,9 +359,32 @@ export function IntakeWizard() {
       }[validation.quality];
       
       const qualityMessage = t(`quality.${validation.quality}`);
-      const feedbackMessage = `${qualityEmoji} ${qualityMessage}`;
+      let feedbackMessage = `${qualityEmoji} ${qualityMessage}`;
 
-      // Add quality feedback
+      // Add classification info
+      if (validation.classifiedType) {
+        const typeLabels: Record<string, string> = {
+          initiative: '🎯 Initiative',
+          value_stream_epic: '📊 Value Stream Epic',
+          epic: '📦 Epic',
+          feature: '⚡ Feature',
+        };
+        const confLabel = validation.classificationConfidence === 'high' ? '✅' : validation.classificationConfidence === 'medium' ? '🔶' : '🔸';
+        feedbackMessage += `\n\n${language === 'de' ? 'Klassifizierung' : 'Classification'}: ${typeLabels[validation.classifiedType]} ${confLabel}`;
+        if (validation.classificationReason) {
+          feedbackMessage += `\n_${validation.classificationReason}_`;
+        }
+      }
+
+      // Add initiative match info
+      if (validation.matchedInitiatives?.length > 0) {
+        feedbackMessage += `\n\n🔗 ${language === 'de' ? 'Mögliche Verknüpfung gefunden' : 'Possible link found'}:`;
+        for (const match of validation.matchedInitiatives) {
+          const scoreEmoji = match.match_score === 'high' ? '🟢' : match.match_score === 'medium' ? '🟡' : '🟠';
+          feedbackMessage += `\n${scoreEmoji} **${match.initiative_title}** – ${match.match_reason}`;
+        }
+      }
+
       setTranscript(prev => [...prev, {
         id: `msg-${Date.now()}-feedback`,
         intakeId: 'new',
@@ -310,6 +392,26 @@ export function IntakeWizard() {
         message: feedbackMessage,
         timestamp: new Date().toISOString(),
       }]);
+    }
+
+    // Check if there are adaptive questions to inject before moving on
+    if (pendingAdaptiveQuestions.length > 0) {
+      const adaptiveQ = pendingAdaptiveQuestions[0];
+      setPendingAdaptiveQuestions(prev => prev.slice(1));
+      setPendingFollowUp(adaptiveQ.question);
+      setIsProcessing(false);
+
+      const adaptiveMsg = `🔍 ${adaptiveQ.question}\n\n_${language === 'de' ? 'Hintergrund' : 'Context'}: ${adaptiveQ.reason}_`;
+      setTranscript(prev => [...prev, {
+        id: `msg-${Date.now()}-adaptive`,
+        intakeId: 'new',
+        speaker: 'assistant',
+        message: adaptiveMsg,
+        timestamp: new Date().toISOString(),
+      }]);
+
+      setAnswers(prev => ({ ...prev, [currentQuestion.key]: combinedAnswer }));
+      return;
     }
 
     setIsProcessing(false);
@@ -432,10 +534,18 @@ export function IntakeWizard() {
                     answers['current_process']?.substring(0, 100) ||
                     `Intake ${new Date().toLocaleDateString()}`;
       
+      // Use classification as category if available
+      const classificationLabel = classification ? {
+        initiative: 'Initiative',
+        value_stream_epic: 'Value Stream Epic',
+        epic: 'Epic',
+        feature: 'Feature',
+      }[classification] : undefined;
+
       const intake = await createIntake.mutateAsync({
         title,
         valueStream: answers['value_stream'] || undefined,
-        category: answers['category'] || undefined,
+        category: classificationLabel || answers['category'] || undefined,
       });
 
       console.log('Created intake:', intake.id);
@@ -457,7 +567,17 @@ export function IntakeWizard() {
 
       console.log('Saved transcript:', transcriptMessages.length, 'messages');
 
-      // Step 3: Generate specification with AI
+      // Step 2.5: Link confirmed initiatives
+      if (confirmedInitiatives.length > 0) {
+        toast.loading(language === 'de' ? 'Verknüpfe Initiativen...' : 'Linking initiatives...', { id: 'gen-spec' });
+        for (const initiative of confirmedInitiatives) {
+          await supabase
+            .from('initiative_intake_links')
+            .update({ intake_id: intake.id, sync_status: 'linked' })
+            .eq('initiative_id', initiative.initiative_id);
+        }
+        console.log('Linked', confirmedInitiatives.length, 'initiatives');
+      }
       toast.loading(language === 'de' ? 'Generiere Spezifikation mit KI...' : 'Generating specification with AI...', { id: 'gen-spec' });
       
       await generateSpec.mutateAsync(intake.id);
@@ -613,6 +733,108 @@ export function IntakeWizard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Classification Card */}
+          {classification && (
+            <Card className="border-primary/30">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">{language === 'de' ? 'KI-Klassifizierung' : 'AI Classification'}</span>
+                  </div>
+                  <Badge variant={classificationConfidence === 'high' ? 'default' : 'secondary'} className="text-xs">
+                    {classificationConfidence === 'high' ? '✅' : classificationConfidence === 'medium' ? '🔶' : '🔸'} {classificationConfidence}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-2">
+                  {(['initiative', 'value_stream_epic', 'epic', 'feature'] as const).map(type => {
+                    const labels: Record<string, { icon: React.ReactNode; label: string }> = {
+                      initiative: { icon: <TrendingUp className="h-3 w-3" />, label: 'Initiative' },
+                      value_stream_epic: { icon: <Layers className="h-3 w-3" />, label: 'Value Stream Epic' },
+                      epic: { icon: <GitBranch className="h-3 w-3" />, label: 'Epic' },
+                      feature: { icon: <Zap className="h-3 w-3" />, label: 'Feature' },
+                    };
+                    const isSelected = (userClassificationOverride || classification) === type;
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          setUserClassificationOverride(type);
+                          setClassification(type);
+                          toast.info(language === 'de' 
+                            ? `Typ auf "${labels[type].label}" geändert` 
+                            : `Type changed to "${labels[type].label}"`);
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2 p-2 rounded-md text-sm transition-colors',
+                          isSelected ? 'bg-primary/15 text-primary font-medium border border-primary/30' : 'hover:bg-muted/50 text-muted-foreground'
+                        )}
+                      >
+                        {labels[type].icon}
+                        {labels[type].label}
+                        {isSelected && <CheckCircle className="h-3 w-3 ml-auto" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {classificationReason && (
+                  <p className="text-xs text-muted-foreground italic">{classificationReason}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Matched Initiatives */}
+          {matchedInitiatives.length > 0 && (
+            <Card className="border-warning/30">
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-warning" />
+                  <span className="text-sm font-medium">{language === 'de' ? 'Initiativen-Matches' : 'Initiative Matches'}</span>
+                </div>
+                
+                <div className="space-y-2">
+                  {matchedInitiatives.map(match => {
+                    const isConfirmed = confirmedInitiatives.some(c => c.initiative_id === match.initiative_id);
+                    const scoreColor = match.match_score === 'high' ? 'text-success' : match.match_score === 'medium' ? 'text-warning' : 'text-muted-foreground';
+                    return (
+                      <div key={match.initiative_id} className={cn(
+                        'p-2 rounded-md border text-sm space-y-1',
+                        isConfirmed ? 'border-success/40 bg-success/5' : 'border-border'
+                      )}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className={cn('font-medium text-xs truncate', scoreColor)}>
+                              {match.match_score === 'high' ? '🟢' : match.match_score === 'medium' ? '🟡' : '🟠'} {match.initiative_title}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{match.match_reason}</p>
+                          </div>
+                          {!isConfirmed ? (
+                            <Button size="sm" variant="outline" className="shrink-0 text-xs h-7" onClick={() => {
+                              setConfirmedInitiatives(prev => [...prev, match]);
+                              toast.success(language === 'de' 
+                                ? `"${match.initiative_title}" verknüpft` 
+                                : `"${match.initiative_title}" linked`);
+                            }}>
+                              <Link2 className="h-3 w-3 mr-1" />
+                              {language === 'de' ? 'Verknüpfen' : 'Link'}
+                            </Button>
+                          ) : (
+                            <Badge variant="outline" className="text-success border-success/40 text-xs shrink-0">
+                              <CheckCircle className="h-3 w-3 mr-1" /> {language === 'de' ? 'Verknüpft' : 'Linked'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* AI Assistant Info */}
           <Card className="border-primary/20 bg-primary/5">
