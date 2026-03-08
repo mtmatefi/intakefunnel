@@ -184,7 +184,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       to={item.href}
                       onClick={onLinkClick}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] transition-colors duration-150",
+                        "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] transition-colors duration-150",
                         sidebarCollapsed && "justify-center px-2",
                         isActive
                           ? "bg-secondary text-foreground font-medium"
