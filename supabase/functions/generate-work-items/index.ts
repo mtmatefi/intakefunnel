@@ -393,6 +393,22 @@ NFRs: Verfügbarkeit: ${structuredSpec.nfrs?.availability || "N/A"}, Antwortzeit
       }
     }
 
+    // Also push notification via notify-work-items for pull-based access
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      await fetch(`${supabaseUrl}/functions/v1/notify-work-items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          innovationId,
+          event: "work_items_generated",
+          summary: `${createdItems.length} Work Items generiert (${epics.length} Epics)`,
+        }),
+      });
+    } catch (notifyErr) {
+      console.warn("Sculptor push notification failed:", notifyErr);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       innovation_id: innovationId,

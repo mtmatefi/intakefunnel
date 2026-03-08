@@ -158,6 +158,32 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-notify Sculptor about the translation
+    try {
+      if (updatedCount > 0) {
+        const firstItem = await db
+          .from("innovation_work_items")
+          .select("innovation_id")
+          .eq("id", workItemIds[0])
+          .single();
+
+        if (firstItem.data?.innovation_id) {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+          await fetch(`${supabaseUrl}/functions/v1/notify-work-items`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              innovationId: firstItem.data.innovation_id,
+              event: "work_items_translated",
+              summary: `${updatedCount} Work Items nach ${targetLanguage} übersetzt`,
+            }),
+          });
+        }
+      }
+    } catch (notifyErr) {
+      console.warn("Sculptor notification failed:", notifyErr);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       translated_count: updatedCount,
