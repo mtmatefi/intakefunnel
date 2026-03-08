@@ -19,7 +19,6 @@ import {
   PlusCircle,
   ClipboardCheck,
   Settings,
-  FileText,
   Shield,
   LogOut,
   User,
@@ -33,8 +32,6 @@ import {
   Globe,
   Wrench,
   Building2,
-  ChevronsUpDown,
-  Plus,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
