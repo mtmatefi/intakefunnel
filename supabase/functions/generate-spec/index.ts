@@ -380,6 +380,23 @@ serve(async (req) => {
                   },
                   assumptions: { type: "array", items: { type: "string" } },
                   openQuestions: { type: "array", items: { type: "string" } },
+                  complianceAssessment: {
+                    type: "array",
+                    description: "Assessment of applicable compliance guidelines",
+                    items: {
+                      type: "object",
+                      properties: {
+                        framework: { type: "string", description: "e.g. ITAR, GDPR, ISO 27001, Enterprise Arch, Security, DevOps" },
+                        guidelineName: { type: "string" },
+                        applicable: { type: "boolean" },
+                        severity: { type: "string", enum: ["critical", "high", "medium", "low"] },
+                        status: { type: "string", enum: ["compliant", "partially_compliant", "non_compliant", "needs_review"] },
+                        requiredActions: { type: "array", items: { type: "string" } },
+                        risks: { type: "array", items: { type: "string" } },
+                      },
+                      required: ["framework", "guidelineName", "applicable", "severity", "status"],
+                    },
+                  },
                 },
                 required: ["problemStatement", "currentProcess", "painPoints", "goals", "users", "dataClassification"],
               },
