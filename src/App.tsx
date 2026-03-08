@@ -26,6 +26,7 @@ import SettingsPage from "./pages/Settings";
 import TutorialsPage from "./pages/Tutorials";
 import NotFound from "./pages/NotFound";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
+import PlatformAdmin from "./pages/PlatformAdmin";
 
 const queryClient = new QueryClient();
 
