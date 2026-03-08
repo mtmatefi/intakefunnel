@@ -20,6 +20,9 @@ const frameworkLabels: Record<string, string> = {
   security: 'Security',
   gdpr: 'DSGVO/GDPR',
   iso27001: 'ISO 27001',
+  enterprise_arch: 'Enterprise Architecture',
+  solution_arch: 'Solution Architecture',
+  devops: 'DevOps / SRE',
   risk_management: 'Risiko-Management',
   general: 'Allgemein',
 };
