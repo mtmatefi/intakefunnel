@@ -96,6 +96,19 @@ Deno.serve(async (req) => {
     if (!sculptorResp.ok) {
       const errText = await sculptorResp.text().catch(() => "Unknown error");
       console.error(`Sculptor export failed (${sculptorResp.status}):`, errText);
+
+      // Graceful fallback: remote function may not exist yet in Sculptor project
+      if (sculptorResp.status === 404 || errText.includes("NOT_FOUND")) {
+        return new Response(JSON.stringify({
+          synced: 0,
+          total: 0,
+          skipped: true,
+          reason: "Sculptor export endpoint not available yet",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ 
         error: "Failed to fetch from Sculptor", 
         status: sculptorResp.status,
