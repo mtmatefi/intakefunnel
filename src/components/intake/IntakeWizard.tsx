@@ -102,10 +102,10 @@ function buildPrefilledAnswers(ctx: InnovationContext): Record<string, string> {
   const prefilled: Record<string, string> = {};
   
   // problem_statement: combine description + hypothesis
-  const parts: string[] = [];
-  if (ctx.description) parts.push(ctx.description);
-  if (ctx.hypothesis) parts.push(`Hypothese: ${ctx.hypothesis}`);
-  if (parts.length > 0) prefilled['problem_statement'] = parts.join('\n\n');
+  const problemParts: string[] = [];
+  if (ctx.description) problemParts.push(ctx.description);
+  if (ctx.hypothesis) problemParts.push(`Hypothese: ${ctx.hypothesis}`);
+  if (problemParts.length > 0) prefilled['problem_statement'] = problemParts.join('\n\n');
   
   // goals: expected outcome + value proposition
   const goalParts: string[] = [];
@@ -115,9 +115,6 @@ function buildPrefilledAnswers(ctx: InnovationContext): Record<string, string> {
   
   // pain_points from learnings
   if (ctx.learnings) prefilled['pain_points'] = ctx.learnings;
-  
-  // users_primary from responsible
-  if (ctx.responsible) prefilled['users_primary'] = `Verantwortlich: ${ctx.responsible}`;
   
   // timeline from target date + effort
   const timeParts: string[] = [];
@@ -130,8 +127,41 @@ function buildPrefilledAnswers(ctx: InnovationContext): Record<string, string> {
     prefilled['regulatory_requirements'] = 'Identifizierte Risiken aus Innovation:\n' + 
       ctx.riskData.map((r: any) => `- ${r.title || r.name}: ${r.description || ''}`).join('\n');
   }
+
+  // impact_data → can inform current_process context
+  if (ctx.impactData && ctx.impactData.length > 0) {
+    prefilled['current_process'] = 'Bekannte Impact-Daten aus der Innovation:\n' +
+      ctx.impactData.map((d: any) => `- ${d.label || d.title || ''}: ${d.value || d.description || ''}`).join('\n');
+  }
   
   return prefilled;
+}
+
+function buildInnovationSummary(ctx: InnovationContext, prefilledKeys: string[], remainingCount: number): string {
+  let msg = `Hallo! 👋 Ich habe die Daten aus der Innovation **"${ctx.title}"** übernommen.\n\n`;
+  msg += `Hier eine kurze Zusammenfassung, was wir bereits wissen:\n\n`;
+  
+  if (ctx.description) msg += `**Beschreibung:** ${ctx.description}\n\n`;
+  if (ctx.hypothesis) msg += `**Hypothese:** ${ctx.hypothesis}\n\n`;
+  if (ctx.expectedOutcome) msg += `**Erwartetes Ergebnis:** ${ctx.expectedOutcome}\n\n`;
+  if (ctx.valueProposition) msg += `**Wertversprechen:** ${ctx.valueProposition}\n\n`;
+  if (ctx.learnings) msg += `**Bisherige Erkenntnisse:** ${ctx.learnings}\n\n`;
+  if (ctx.responsible) msg += `**Verantwortlich:** ${ctx.responsible}\n\n`;
+  if (ctx.targetDate) msg += `**Zieldatum:** ${new Date(ctx.targetDate).toLocaleDateString('de-DE')}\n\n`;
+  if (ctx.effortEstimate) msg += `**Aufwandsschätzung:** ${ctx.effortEstimate}\n\n`;
+  
+  if (ctx.riskData && ctx.riskData.length > 0) {
+    msg += `**Bekannte Risiken:**\n`;
+    ctx.riskData.forEach((r: any) => { msg += `- ${r.title || r.name}: ${r.description || ''}\n`; });
+    msg += '\n';
+  }
+
+  msg += `---\n\n`;
+  msg += `Damit sind **${prefilledKeys.length} von ${prefilledKeys.length + remainingCount} Bereichen** bereits abgedeckt. `;
+  msg += `Ich stelle dir jetzt nur noch die **${remainingCount} offenen Fragen**, um den Intake zu vervollständigen.\n\n`;
+  msg += `Lass uns loslegen! 🚀`;
+  
+  return msg;
 }
 
 export function IntakeWizard({ innovationContext }: { innovationContext?: InnovationContext | null }) {
@@ -242,13 +272,7 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
       const allKeys = interviewQuestions.map(q => q.key);
       const remainingKeys = allKeys.filter(k => !prefilledKeys.includes(k));
       
-      let summaryMsg = `🚀 **Innovation-Daten übernommen: "${innovationContext.title}"**\n\n`;
-      summaryMsg += `✅ **${prefilledKeys.length} Fragen** wurden automatisch aus der Innovation beantwortet:\n`;
-      for (const key of prefilledKeys) {
-        const q = interviewQuestions.find(iq => iq.key === key);
-        if (q) summaryMsg += `- ${q.question.substring(0, 60)}...\n`;
-      }
-      summaryMsg += `\n📋 **${remainingKeys.length} offene Fragen** verbleiben. Lass uns diese durchgehen!`;
+      const summaryMsg = buildInnovationSummary(innovationContext, prefilledKeys, remainingKeys.length);
 
       setTranscript([{
         id: `msg-innovation-prefill`,
