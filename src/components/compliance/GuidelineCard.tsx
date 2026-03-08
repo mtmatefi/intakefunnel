@@ -31,6 +31,7 @@ interface Props {
   guideline: Guideline;
   onEdit: (g: Guideline) => void;
   onChatEdit?: (g: Guideline) => void;
+  onShowHistory?: (g: Guideline) => void;
   onDelete: (id: string) => void;
   onToggleActive: (id: string, active: boolean) => void;
 }
