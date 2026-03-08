@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.coach-interview-rules]
 verify_jwt = false
+
+[functions.export-work-items]
+verify_jwt = false

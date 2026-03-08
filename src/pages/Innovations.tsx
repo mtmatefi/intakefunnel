@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInnovations, useInnovationFeedback, useAddInnovationFeedback, useFetchInnovationsFromSculptor } from "@/hooks/useInnovations";
+import { useWorkItemTree, useExportWorkItemsToJira } from "@/hooks/useWorkItems";
+import type { WorkItemTree } from "@/hooks/useWorkItems";
 import { useUnreadFeedback } from "@/hooks/useUnreadFeedback";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +18,7 @@ import {
   Lightbulb, FlaskConical, Rocket, CheckCircle2,
   TrendingUp, ShieldAlert, Target, MessageSquarePlus, PlusCircle,
   Clock, User, ArrowRight, RefreshCw, Search, LayoutGrid, List,
+  GitBranch, ExternalLink, Loader2,
 } from "lucide-react";
 import type { SyncedInnovation } from "@/hooks/useInnovations";
 
@@ -99,6 +102,69 @@ function InnovationCard({ innovation, onClick, unreadCount, isNew }: { innovatio
   );
 }
 
+// ── Work Item Tree View ──
+const ITEM_TYPE_ICONS: Record<string, string> = { epic: "📦", feature: "✨", story: "📝" };
+const ITEM_TYPE_LABELS: Record<string, string> = { epic: "Epic", feature: "Feature", story: "Story" };
+const JIRA_STATUS_COLORS: Record<string, string> = {
+  "To Do": "bg-muted text-muted-foreground",
+  "In Progress": "bg-primary/20 text-primary",
+  "Done": "bg-emerald-500/20 text-emerald-400",
+};
+
+function WorkItemNode({ item, depth = 0 }: { item: WorkItemTree; depth?: number }) {
+  return (
+    <div>
+      <div
+        className={cn(
+          "flex items-center gap-2 py-1.5 px-2 rounded text-sm hover:bg-secondary/40 transition-colors",
+        )}
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      >
+        <span className="text-xs">{ITEM_TYPE_ICONS[item.item_type] || "📋"}</span>
+        <span className="flex-1 truncate">{item.title}</span>
+        {item.jira_issue_key ? (
+          <a
+            href={item.jira_issue_url || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-[10px] font-mono text-primary hover:underline shrink-0"
+          >
+            {item.jira_issue_key}
+            <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        ) : (
+          <Badge variant="outline" className="text-[9px] h-4 px-1.5 text-muted-foreground">
+            {ITEM_TYPE_LABELS[item.item_type]}
+          </Badge>
+        )}
+        {item.jira_status && (
+          <Badge variant="secondary" className={cn("text-[9px] h-4 px-1.5", JIRA_STATUS_COLORS[item.jira_status] || "")}>
+            {item.jira_status}
+          </Badge>
+        )}
+      </div>
+      {item.children.length > 0 && (
+        <div className="border-l border-border/30 ml-4">
+          {item.children.map((child) => (
+            <WorkItemNode key={child.id} item={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorkItemTreeView({ items }: { items: WorkItemTree[] }) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/30 divide-y divide-border/30">
+      {items.map((item) => (
+        <WorkItemNode key={item.id} item={item} />
+      ))}
+    </div>
+  );
+}
+
 // ── Detail Sheet ──
 function InnovationDetailSheet({
   innovation,
@@ -113,8 +179,11 @@ function InnovationDetailSheet({
 }) {
   const navigate = useNavigate();
   const { data: feedback = [] } = useInnovationFeedback(innovation?.id);
+  const { tree: workItemTree, items: workItems = [], isLoading: wiLoading } = useWorkItemTree(innovation?.id);
+  const exportToJira = useExportWorkItemsToJira();
   const addFeedback = useAddInnovationFeedback();
   const [comment, setComment] = useState("");
+  const [jiraProjectKey, setJiraProjectKey] = useState("");
 
   // Mark as read when sheet opens
   useEffect(() => {
@@ -285,6 +354,57 @@ function InnovationDetailSheet({
               </div>
             </div>
           )}
+
+          <Separator />
+
+          {/* Work Items (Epics/Features/Stories) */}
+          <div>
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5">
+              <GitBranch className="h-4 w-4" /> Epics, Features & Stories
+            </h4>
+            {wiLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Laden...
+              </div>
+            ) : workItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground/60 italic">Keine Work Items vom Sculptor synchronisiert.</p>
+            ) : (
+              <>
+                <WorkItemTreeView items={workItemTree} />
+                {/* Jira Export */}
+                {workItems.some(wi => !wi.jira_issue_key) && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <Input
+                      placeholder="Jira Project Key (z.B. PROJ)"
+                      value={jiraProjectKey}
+                      onChange={(e) => setJiraProjectKey(e.target.value.toUpperCase())}
+                      className="flex-1 h-8 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!jiraProjectKey.trim() || exportToJira.isPending}
+                      onClick={async () => {
+                        try {
+                          const result = await exportToJira.mutateAsync({ innovationId: innovation.id, projectKey: jiraProjectKey.trim() });
+                          toast.success(`${result.exported_count} Items nach Jira exportiert`);
+                        } catch {
+                          toast.error("Jira-Export fehlgeschlagen");
+                        }
+                      }}
+                      className="gap-1.5 text-xs h-8"
+                    >
+                      {exportToJira.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+                      Nach Jira exportieren
+                    </Button>
+                  </div>
+                )}
+                {workItems.every(wi => !!wi.jira_issue_key) && (
+                  <p className="text-xs text-primary mt-2">✓ Alle Items nach Jira exportiert</p>
+                )}
+              </>
+            )}
+          </div>
 
           <Separator />
 
