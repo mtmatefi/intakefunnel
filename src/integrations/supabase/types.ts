@@ -454,6 +454,81 @@ export type Database = {
           },
         ]
       }
+      innovation_work_items: {
+        Row: {
+          assignee: string | null
+          created_at: string
+          description: string | null
+          external_id: string
+          id: string
+          innovation_id: string
+          item_type: Database["public"]["Enums"]["work_item_type"]
+          jira_exported_at: string | null
+          jira_issue_key: string | null
+          jira_issue_url: string | null
+          jira_status: string | null
+          parent_id: string | null
+          source_app: string
+          status: string
+          synced_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee?: string | null
+          created_at?: string
+          description?: string | null
+          external_id: string
+          id?: string
+          innovation_id: string
+          item_type: Database["public"]["Enums"]["work_item_type"]
+          jira_exported_at?: string | null
+          jira_issue_key?: string | null
+          jira_issue_url?: string | null
+          jira_status?: string | null
+          parent_id?: string | null
+          source_app?: string
+          status?: string
+          synced_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee?: string | null
+          created_at?: string
+          description?: string | null
+          external_id?: string
+          id?: string
+          innovation_id?: string
+          item_type?: Database["public"]["Enums"]["work_item_type"]
+          jira_exported_at?: string | null
+          jira_issue_key?: string | null
+          jira_issue_url?: string | null
+          jira_status?: string | null
+          parent_id?: string | null
+          source_app?: string
+          status?: string
+          synced_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "innovation_work_items_innovation_id_fkey"
+            columns: ["innovation_id"]
+            isOneToOne: false
+            referencedRelation: "synced_innovations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "innovation_work_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "innovation_work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intakes: {
         Row: {
           category: string | null
@@ -1048,6 +1123,7 @@ export type Database = {
         | "exported"
         | "closed"
       user_role: "requester" | "architect" | "engineer_lead" | "admin"
+      work_item_type: "epic" | "feature" | "story"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1194,6 +1270,7 @@ export const Constants = {
         "closed",
       ],
       user_role: ["requester", "architect", "engineer_lead", "admin"],
+      work_item_type: ["epic", "feature", "story"],
     },
   },
 } as const
