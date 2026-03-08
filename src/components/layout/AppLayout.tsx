@@ -40,7 +40,7 @@ const navigation = [
   { name: "Metriken", href: "/metrics", icon: BarChart3, roles: ["architect", "admin"] },
   { name: "Interview Setting", href: "/admin/interview-config", icon: PlusCircle, roles: ["architect", "admin"] },
   { name: "Audit Log", href: "/audit", icon: FileText, roles: ["admin"] },
-  { name: "Policies", href: "/admin/policies", icon: Shield, roles: ["admin"] },
+  { name: "Compliance", href: "/admin/policies", icon: Shield, roles: ["admin", "architect"] },
   { name: "Integrations", href: "/admin/integrations", icon: Settings, roles: ["admin"] },
   { name: "Benutzer", href: "/admin/users", icon: UserCog, roles: ["admin"] },
 ];
