@@ -600,6 +600,7 @@ export default function InnovationsPage() {
           innovation={selectedInnovation}
           open={!!selectedInnovation}
           onClose={() => setSelectedInnovation(null)}
+          onMarkRead={(id) => markAsRead.mutate(id)}
         />
       </div>
     </AppLayout>
