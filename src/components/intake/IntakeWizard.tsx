@@ -1024,7 +1024,7 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
                   <MessageSquare className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base">{t('wizard.title')}</CardTitle>
                 </div>
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                   {isValidating && (
                     <Badge variant="outline" className="gap-1">
                       <Sparkles className="h-3 w-3 animate-pulse" />
@@ -1037,6 +1037,12 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
                       {voiceStateInfo.text}
                     </Badge>
                   )}
+                  <Badge variant="secondary" className="gap-1 tabular-nums">
+                    {totalQuestions - answeredQuestions > 0 
+                      ? `${language === 'de' ? 'Noch' : ''} ~${totalQuestions - answeredQuestions} ${language === 'de' ? 'Fragen offen' : 'left'}`
+                      : (language === 'de' ? '✅ Fertig' : '✅ Done')
+                    }
+                  </Badge>
                   <Badge variant="outline">{getCategoryLabel(currentCategory)}</Badge>
                 </div>
               </div>
