@@ -328,11 +328,22 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
 
   useEffect(() => {
     // Add initial assistant message when category changes
+    // Skip if question is already pre-filled from innovation context
     if (currentQuestion && !transcript.find(t => t.questionKey === currentQuestion.key)) {
+      // Don't show the standard question prompt if it's already answered via prefill
+      if (answers[currentQuestion.key] && prefilledAnswers[currentQuestion.key]) return;
+      
       const categoryLabel = getCategoryLabel(currentCategory);
-      const categoryIntro = currentQuestionIndex === 0 
-        ? t('wizard.categoryIntro').replace('{category}', categoryLabel.toLowerCase()) + ' '
-        : '';
+      
+      // When coming from innovation context, use a softer transition instead of the generic category intro
+      let categoryIntro = '';
+      if (currentQuestionIndex === 0) {
+        if (innovationContext) {
+          categoryIntro = `Gut, zum Thema **${categoryLabel}** hätte ich noch eine Frage: `;
+        } else {
+          categoryIntro = t('wizard.categoryIntro').replace('{category}', categoryLabel.toLowerCase()) + ' ';
+        }
+      }
       
       const questionText = getQuestionText(currentQuestion);
       const helpText = getHelpText(currentQuestion);
