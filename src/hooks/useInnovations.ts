@@ -117,6 +117,19 @@ export function useAddInnovationFeedback() {
         .select()
         .single();
       if (error) throw error;
+
+      // Fire-and-forget: sync feedback to Strategy Sculptor
+      supabase.functions.invoke('send-innovation-feedback', {
+        body: {
+          innovation_id: innovationId,
+          comment,
+          feedback_type: feedbackType,
+        },
+      }).then(({ error: syncErr }) => {
+        if (syncErr) console.warn('Feedback sync to Sculptor failed:', syncErr.message);
+        else console.log('Feedback synced to Sculptor');
+      });
+
       return data;
     },
     onSuccess: (_, variables) => {
