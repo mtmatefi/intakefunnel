@@ -36,7 +36,7 @@ interface Props {
   onToggleActive: (id: string, active: boolean) => void;
 }
 
-export function GuidelineCard({ guideline, onEdit, onChatEdit, onDelete, onToggleActive }: Props) {
+export function GuidelineCard({ guideline, onEdit, onChatEdit, onShowHistory, onDelete, onToggleActive }: Props) {
   const isOverdue = guideline.last_reviewed_at
     ? new Date().getTime() - new Date(guideline.last_reviewed_at).getTime() >
       guideline.review_frequency_days * 86400000
