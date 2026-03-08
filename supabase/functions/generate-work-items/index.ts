@@ -143,7 +143,7 @@ Regeln:
     const specSummary = `
 Problemstellung: ${structuredSpec.problemStatement || "N/A"}
 Ziele: ${(structuredSpec.goals || []).join(", ")}
-Benutzer: ${(structuredSpec.users || []).map((u: any) => \`\${u.persona} (\${u.count})\`).join(", ")}
+Benutzer: ${(structuredSpec.users || []).map((u: any) => `${u.persona} (${u.count})`).join(", ")}
 Integrationen: ${(structuredSpec.integrations || []).map((i: any) => i.system).join(", ")}
 Datenklassifizierung: ${structuredSpec.dataClassification || "N/A"}
 Acceptance Criteria: ${(structuredSpec.acceptanceCriteria || []).map((ac: any) => ac.storyRef + ": " + ac.when).join("; ")}
@@ -185,14 +185,14 @@ NFRs: Verfügbarkeit: ${structuredSpec.nfrs?.availability || "N/A"}, Antwortzeit
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: \`Bearer \${LOVABLE_API_KEY}\`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: \`Erstelle eine hierarchische Aufgliederung für folgende Spezifikation:\n\n\${specSummary}\` },
+          { role: "user", content: `Erstelle eine hierarchische Aufgliederung für folgende Spezifikation:\n\n${specSummary}` },
         ],
         tools: [
           {
