@@ -54,7 +54,7 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 // ── Innovation Card ──
-function InnovationCard({ innovation, onClick, unreadCount }: { innovation: SyncedInnovation; onClick: () => void; unreadCount: number }) {
+function InnovationCard({ innovation, onClick, unreadCount, isNew }: { innovation: SyncedInnovation; onClick: () => void; unreadCount: number; isNew: boolean }) {
   const daysAge = Math.floor((Date.now() - new Date(innovation.updated_at).getTime()) / 86_400_000);
   const isImplement = innovation.stage === "implement";
 
