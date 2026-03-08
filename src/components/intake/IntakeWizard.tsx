@@ -1067,13 +1067,13 @@ export function IntakeWizard({ innovationContext }: { innovationContext?: Innova
                 >
                   <div
                     className={cn(
-                      'max-w-[80%] p-3 text-sm whitespace-pre-wrap rounded-lg',
+                      'max-w-[80%] p-3 text-sm rounded-lg prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0 prose-headings:my-1 max-w-none',
                       msg.speaker === 'user'
-                        ? 'bg-primary text-primary-foreground'
+                        ? 'bg-primary text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-em:text-primary-foreground'
                         : 'bg-muted text-foreground'
                     )}
                   >
-                    {msg.message}
+                    <ReactMarkdown>{msg.message}</ReactMarkdown>
                   </div>
                 </div>
               ))}
