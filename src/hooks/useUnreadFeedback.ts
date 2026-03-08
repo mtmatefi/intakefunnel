@@ -109,7 +109,9 @@ export function useUnreadFeedback() {
   return {
     unreadCounts,
     totalUnread,
+    newInnovationIds,
     getUnreadForInnovation,
+    isNewInnovation,
     markAsRead,
     ...rest,
   };
