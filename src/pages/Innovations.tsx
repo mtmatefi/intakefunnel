@@ -311,9 +311,19 @@ function InnovationDetailDialog({
 
 export default function InnovationsPage() {
   const { workspace } = useWorkspace();
-  const { data: innovations = [], isLoading } = useInnovations(workspace?.id);
+  const { data: innovations = [], isLoading, refetch } = useInnovations(workspace?.id);
+  const fetchFromSculptor = useFetchInnovationsFromSculptor();
   const [selectedInnovation, setSelectedInnovation] = useState<SyncedInnovation | null>(null);
   const [stageFilter, setStageFilter] = useState<string | null>(null);
+
+  // Auto-fetch from Sculptor when page loads and workspace is linked
+  useEffect(() => {
+    if (workspace?.id && (workspace as any).external_workspace_id) {
+      fetchFromSculptor.mutate(workspace.id, {
+        onSuccess: () => refetch(),
+      });
+    }
+  }, [workspace?.id]);
 
   const stages = Object.entries(stageConfig);
   const filtered = stageFilter
