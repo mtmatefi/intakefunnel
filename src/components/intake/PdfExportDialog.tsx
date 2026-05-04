@@ -360,19 +360,20 @@ async function generatePdf(opts: GenOpts) {
 
   // Key-value row
   const kv = (k: string, v: string) => {
-    if (!v) return;
+    const cv = clean(v);
+    if (!cv) return;
     const lh = 10 * 1.3;
     ensure(lh + 4);
     setColor(COLORS.muted, 'text');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(k, M.left + 6, ctx.y + lh - 2);
+    doc.text(clean(k), M.left + 6, ctx.y + lh - 2);
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     const valueX = M.left + 130;
     const valueW = contentW - 130 - 6;
-    const lines = doc.splitTextToSize(String(v), valueW);
+    const lines = doc.splitTextToSize(cv, valueW);
     for (let i = 0; i < lines.length; i++) {
       if (i > 0) ensure(lh + 2);
       doc.text(lines[i], valueX, ctx.y + lh - 2);
