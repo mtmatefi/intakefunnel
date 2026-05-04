@@ -36,6 +36,7 @@ import {
   Building2,
   Link2,
   Lightbulb,
+  Inbox,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
@@ -59,6 +60,7 @@ const navSections: NavSection[] = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["requester", "architect", "engineer_lead", "admin"] },
       { name: "Neuer Intake", href: "/intake/new", icon: PlusCircle, roles: ["requester", "architect", "admin"] },
+      { name: "Intakes", href: "/intakes", icon: Inbox, roles: ["requester", "architect", "engineer_lead", "admin"] },
       { name: "Innovationen", href: "/innovations", icon: Lightbulb, roles: ["requester", "architect", "engineer_lead", "admin"] },
     ],
   },
