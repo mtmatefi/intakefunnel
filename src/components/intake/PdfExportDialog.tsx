@@ -670,7 +670,7 @@ async function generatePdf(opts: GenOpts) {
       setColor(COLORS.muted, 'text');
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
-      doc.text(ts, pw - M.right, ctx.y + 8, { align: 'right' });
+      doc.text(clean(ts), pw - M.right, ctx.y + 8, { align: 'right' });
       ctx.y += 14;
 
       // Message
