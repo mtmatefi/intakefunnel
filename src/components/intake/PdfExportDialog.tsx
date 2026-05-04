@@ -442,7 +442,7 @@ async function generatePdf(opts: GenOpts) {
       doc.text(String(i + 1).padStart(2, '0'), M.left + 6, ctx.y + lh - 2);
       setColor(COLORS.text, 'text');
       doc.setFont('helvetica', 'normal');
-      doc.text(t, M.left + 30, ctx.y + lh - 2);
+      doc.text(clean(t), M.left + 30, ctx.y + lh - 2);
       ctx.y += lh + 2;
     });
   });
