@@ -28,6 +28,7 @@ import { ImpactScoreCard } from '@/components/intake/ImpactScoreCard';
 import { ApprovalDialog } from '@/components/intake/ApprovalDialog';
 import { InitiativeLinkCard } from '@/components/intake/InitiativeLinkCard';
 import { IntakeChat } from '@/components/intake/IntakeChat';
+import { PdfExportDialog } from '@/components/intake/PdfExportDialog';
 
 export default function IntakeDetailPage() {
   const { id } = useParams();
