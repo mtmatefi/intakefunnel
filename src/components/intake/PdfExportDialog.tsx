@@ -614,11 +614,11 @@ async function generatePdf(opts: GenOpts) {
         setColor(COLORS.text, 'text');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+        const label = clean(k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()));
         doc.text(label, M.left, ctx.y + lh - 2);
         // Value
         setColor(COLORS.primary, 'text');
-        doc.text(String(v), pw - M.right, ctx.y + lh - 2, { align: 'right' });
+        doc.text(clean(String(v)), pw - M.right, ctx.y + lh - 2, { align: 'right' });
         ctx.y += lh;
         // Bar
         const barH = 5;
