@@ -571,8 +571,8 @@ export default function IntakeDetailPage() {
                 <Card>
                   <CardHeader><CardTitle className="text-base">Routing-Analyse</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <ReactMarkdown>{routing.explanation_markdown || ''}</ReactMarkdown>
+                    <div className="prose prose-sm max-w-none dark:prose-invert prose-table:border prose-table:border-border prose-th:border prose-th:border-border prose-th:bg-muted prose-th:px-3 prose-th:py-2 prose-td:border prose-td:border-border prose-td:px-3 prose-td:py-2">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{routing.explanation_markdown || ''}</ReactMarkdown>
                     </div>
                   </CardContent>
                 </Card>
