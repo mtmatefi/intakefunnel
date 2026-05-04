@@ -196,14 +196,14 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    const headerTitle = ctx.jpdKey ? `${ctx.jpdKey} · ${ctx.title}` : ctx.title;
+    const headerTitle = ctx.jpdKey ? `${clean(ctx.jpdKey)} - ${clean(ctx.title)}` : clean(ctx.title);
     const truncated = doc.splitTextToSize(headerTitle, contentW * 0.7)[0];
     doc.text(truncated, M.left, 40);
     // Section label right
     setColor(COLORS.muted, 'text');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text(ctx.sectionLabel, pw - M.right, 40, { align: 'right' });
+    doc.text(clean(ctx.sectionLabel), pw - M.right, 40, { align: 'right' });
     // Divider
     setColor(COLORS.border, 'draw');
     doc.setLineWidth(0.5);
