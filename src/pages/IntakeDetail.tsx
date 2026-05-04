@@ -160,6 +160,14 @@ export default function IntakeDetailPage() {
             <PdfExportDialog
               intakeTitle={intake.title}
               jpdKey={intake.jpd_issue_key}
+              intakeMeta={{
+                status: intake.status,
+                priority: intake.priority,
+                valueStream: intake.value_stream,
+                category: intake.category,
+                createdAt: intake.created_at,
+                updatedAt: intake.updated_at,
+              }}
               spec={spec}
               routing={routing}
               transcript={transcript}
