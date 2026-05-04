@@ -14,6 +14,7 @@ import LoginPage from "./pages/Login";
 import DashboardPage from "./pages/Dashboard";
 import NewIntakePage from "./pages/NewIntake";
 import IntakeDetailPage from "./pages/IntakeDetail";
+import IntakesPage from "./pages/Intakes";
 import ArchitectQueuePage from "./pages/ArchitectQueue";
 import MetricsPage from "./pages/Metrics";
 import AuditLogPage from "./pages/AuditLog";
