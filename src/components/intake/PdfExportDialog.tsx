@@ -149,6 +149,34 @@ async function generatePdf(opts: GenOpts) {
   };
 
   // ---- Helpers ----
+  // Sanitize: jsPDF default fonts (helvetica) only support WinAnsi (Latin-1).
+  // Strip emojis, symbols, control chars, zero-width chars and characters > U+00FF.
+  // Replace common typographic chars with WinAnsi equivalents.
+  const clean = (raw: unknown): string => {
+    if (raw == null) return '';
+    let s = String(raw);
+    // Normalize and replace common typographic punctuation
+    s = s.normalize('NFKC')
+      .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+      .replace(/[\u2013\u2014]/g, '-')
+      .replace(/\u2026/g, '...')
+      .replace(/[\u00A0\u202F\u2007]/g, ' ')
+      // Bullets / arrows that we keep as ASCII
+      .replace(/[\u2022\u25CF\u25AA\u25A0]/g, '-')
+      .replace(/[\u2192\u27A1]/g, '->')
+      // Zero-width / bidi / variation selectors
+      .replace(/[\u200B-\u200F\u2028-\u202F\u2060-\u206F\uFEFF]/g, '')
+      .replace(/[\uFE00-\uFE0F]/g, '');
+    // Drop surrogate pairs (emoji etc.)
+    s = s.replace(/[\uD800-\uDFFF]./g, '');
+    // Drop everything outside Latin-1 (keeps ä ö ü ß é à etc.)
+    s = s.replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '');
+    // Collapse whitespace runs but keep newlines
+    s = s.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n');
+    return s.trim();
+  };
+
   const setColor = (rgb: readonly number[], type: 'fill' | 'text' | 'draw' = 'text') => {
     const [r, g, b] = rgb;
     if (type === 'fill') doc.setFillColor(r, g, b);
