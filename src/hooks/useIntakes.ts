@@ -34,6 +34,29 @@ export function useIntakes() {
   });
 }
 
+/**
+ * Returns intakes filtered purely by RLS:
+ * - Requesters see only their own intakes
+ * - Architects and admins see all intakes (across all workspaces)
+ */
+export function useAllIntakes() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['intakes-all', user?.id, user?.role],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('intakes')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      return data as Intake[];
+    },
+    enabled: !!user,
+  });
+}
+
 export function useIntake(intakeId: string | undefined) {
   return useQuery({
     queryKey: ['intake', intakeId],
