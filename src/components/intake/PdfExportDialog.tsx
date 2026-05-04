@@ -417,7 +417,7 @@ async function generatePdf(opts: GenOpts) {
   if (opts.intakeMeta) {
     h3('Übersicht');
     card(() => {
-      kv('Status', opts.intakeMeta?.status?.replace(/_/g, ' ') || '—');
+      kv('Status', opts.intakeMeta?.status?.replace(/_/g, ' ') || '-');
       if (opts.intakeMeta?.priority) kv('Priorität', opts.intakeMeta.priority);
       if (opts.intakeMeta?.valueStream) kv('Value Stream', opts.intakeMeta.valueStream);
       if (opts.intakeMeta?.category) kv('Kategorie', opts.intakeMeta.category);
