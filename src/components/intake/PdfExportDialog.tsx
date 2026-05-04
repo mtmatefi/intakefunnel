@@ -149,6 +149,34 @@ async function generatePdf(opts: GenOpts) {
   };
 
   // ---- Helpers ----
+  // Sanitize: jsPDF default fonts (helvetica) only support WinAnsi (Latin-1).
+  // Strip emojis, symbols, control chars, zero-width chars and characters > U+00FF.
+  // Replace common typographic chars with WinAnsi equivalents.
+  const clean = (raw: unknown): string => {
+    if (raw == null) return '';
+    let s = String(raw);
+    // Normalize and replace common typographic punctuation
+    s = s.normalize('NFKC')
+      .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+      .replace(/[\u2013\u2014]/g, '-')
+      .replace(/\u2026/g, '...')
+      .replace(/[\u00A0\u202F\u2007]/g, ' ')
+      // Bullets / arrows that we keep as ASCII
+      .replace(/[\u2022\u25CF\u25AA\u25A0]/g, '-')
+      .replace(/[\u2192\u27A1]/g, '->')
+      // Zero-width / bidi / variation selectors
+      .replace(/[\u200B-\u200F\u2028-\u202F\u2060-\u206F\uFEFF]/g, '')
+      .replace(/[\uFE00-\uFE0F]/g, '');
+    // Drop surrogate pairs (emoji etc.)
+    s = s.replace(/[\uD800-\uDFFF]./g, '');
+    // Drop everything outside Latin-1 (keeps ä ö ü ß é à etc.)
+    s = s.replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '');
+    // Collapse whitespace runs but keep newlines
+    s = s.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n');
+    return s.trim();
+  };
+
   const setColor = (rgb: readonly number[], type: 'fill' | 'text' | 'draw' = 'text') => {
     const [r, g, b] = rgb;
     if (type === 'fill') doc.setFillColor(r, g, b);
@@ -168,14 +196,14 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    const headerTitle = ctx.jpdKey ? `${ctx.jpdKey} · ${ctx.title}` : ctx.title;
+    const headerTitle = ctx.jpdKey ? `${clean(ctx.jpdKey)} - ${clean(ctx.title)}` : clean(ctx.title);
     const truncated = doc.splitTextToSize(headerTitle, contentW * 0.7)[0];
     doc.text(truncated, M.left, 40);
     // Section label right
     setColor(COLORS.muted, 'text');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text(ctx.sectionLabel, pw - M.right, 40, { align: 'right' });
+    doc.text(clean(ctx.sectionLabel), pw - M.right, 40, { align: 'right' });
     // Divider
     setColor(COLORS.border, 'draw');
     doc.setLineWidth(0.5);
@@ -213,7 +241,9 @@ async function generatePdf(opts: GenOpts) {
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
     doc.setFontSize(size);
     setColor(color, 'text');
-    const lines = doc.splitTextToSize(String(str ?? ''), maxWidth);
+    const cleaned = clean(str);
+    if (!cleaned) return;
+    const lines = doc.splitTextToSize(cleaned, maxWidth);
     const lh = size * 1.25;
     for (const line of lines) {
       ensure(lh + lineGap);
@@ -223,15 +253,14 @@ async function generatePdf(opts: GenOpts) {
   };
 
   const sectionTitle = (label: string) => {
-    ctx.sectionLabel = label;
+    ctx.sectionLabel = clean(label);
     newPage();
-    // Big section header block
     setColor(COLORS.primary, 'fill');
     doc.rect(M.left, ctx.y, 4, 28, 'F');
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
-    doc.text(label, M.left + 14, ctx.y + 20);
+    doc.text(clean(label), M.left + 14, ctx.y + 20);
     ctx.y += 38;
   };
 
@@ -241,7 +270,7 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.primaryDark, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
-    doc.text(label, M.left, ctx.y + 12);
+    doc.text(clean(label), M.left, ctx.y + 12);
     ctx.y += 16;
     setColor(COLORS.primary, 'draw');
     doc.setLineWidth(0.8);
@@ -255,30 +284,34 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text(label, M.left, ctx.y + 10);
+    doc.text(clean(label), M.left, ctx.y + 10);
     ctx.y += 14;
   };
 
   const paragraph = (str: string) => {
-    if (!str) return;
-    text(str, { size: 10, color: COLORS.text, lineGap: 3 });
+    const c = clean(str);
+    if (!c) return;
+    text(c, { size: 10, color: COLORS.text, lineGap: 3 });
   };
 
   const muted = (str: string) => {
-    if (!str) return;
-    text(str, { size: 9, color: COLORS.muted, lineGap: 2 });
+    const c = clean(str);
+    if (!c) return;
+    text(c, { size: 9, color: COLORS.muted, lineGap: 2 });
   };
 
   const bullet = (str: string) => {
+    const c = clean(str);
+    if (!c) return;
     const indent = 14;
     const bulletX = M.left + 4;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     setColor(COLORS.primary, 'text');
-    const lines = doc.splitTextToSize(str, contentW - indent);
+    const lines = doc.splitTextToSize(c, contentW - indent);
     const lh = 10 * 1.3;
     ensure(lh + 3);
-    doc.text('•', bulletX, ctx.y + lh - 2);
+    doc.text('-', bulletX, ctx.y + lh - 2);
     setColor(COLORS.text, 'text');
     for (let i = 0; i < lines.length; i++) {
       if (i > 0) ensure(lh + 2);
@@ -288,13 +321,14 @@ async function generatePdf(opts: GenOpts) {
   };
 
   const badge = (label: string, x: number, y: number, color: readonly number[]): number => {
+    const c = clean(label);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    const w = doc.getTextWidth(label) + 12;
+    const w = doc.getTextWidth(c) + 12;
     setColor(color, 'fill');
     doc.roundedRect(x, y - 9, w, 13, 3, 3, 'F');
     setColor(COLORS.white, 'text');
-    doc.text(label, x + 6, y);
+    doc.text(c, x + 6, y);
     return w;
   };
 
@@ -326,19 +360,20 @@ async function generatePdf(opts: GenOpts) {
 
   // Key-value row
   const kv = (k: string, v: string) => {
-    if (!v) return;
+    const cv = clean(v);
+    if (!cv) return;
     const lh = 10 * 1.3;
     ensure(lh + 4);
     setColor(COLORS.muted, 'text');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(k, M.left + 6, ctx.y + lh - 2);
+    doc.text(clean(k), M.left + 6, ctx.y + lh - 2);
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     const valueX = M.left + 130;
     const valueW = contentW - 130 - 6;
-    const lines = doc.splitTextToSize(String(v), valueW);
+    const lines = doc.splitTextToSize(cv, valueW);
     for (let i = 0; i < lines.length; i++) {
       if (i > 0) ensure(lh + 2);
       doc.text(lines[i], valueX, ctx.y + lh - 2);
@@ -358,7 +393,7 @@ async function generatePdf(opts: GenOpts) {
   setColor(COLORS.text, 'text');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(26);
-  const titleLines = doc.splitTextToSize(opts.intakeTitle, contentW);
+  const titleLines = doc.splitTextToSize(clean(opts.intakeTitle), contentW);
   for (const line of titleLines) {
     ensure(32);
     doc.text(line, M.left, ctx.y + 22);
@@ -369,7 +404,7 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.primary, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text(opts.jpdKey, M.left, ctx.y + 14);
+    doc.text(clean(opts.jpdKey), M.left, ctx.y + 14);
     ctx.y += 22;
   }
 
@@ -382,7 +417,7 @@ async function generatePdf(opts: GenOpts) {
   if (opts.intakeMeta) {
     h3('Übersicht');
     card(() => {
-      kv('Status', opts.intakeMeta?.status?.replace(/_/g, ' ') || '—');
+      kv('Status', opts.intakeMeta?.status?.replace(/_/g, ' ') || '-');
       if (opts.intakeMeta?.priority) kv('Priorität', opts.intakeMeta.priority);
       if (opts.intakeMeta?.valueStream) kv('Value Stream', opts.intakeMeta.valueStream);
       if (opts.intakeMeta?.category) kv('Kategorie', opts.intakeMeta.category);
@@ -407,7 +442,7 @@ async function generatePdf(opts: GenOpts) {
       doc.text(String(i + 1).padStart(2, '0'), M.left + 6, ctx.y + lh - 2);
       setColor(COLORS.text, 'text');
       doc.setFont('helvetica', 'normal');
-      doc.text(t, M.left + 30, ctx.y + lh - 2);
+      doc.text(clean(t), M.left + 30, ctx.y + lh - 2);
       ctx.y += lh + 2;
     });
   });
@@ -579,11 +614,11 @@ async function generatePdf(opts: GenOpts) {
         setColor(COLORS.text, 'text');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        const label = k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+        const label = clean(k.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()));
         doc.text(label, M.left, ctx.y + lh - 2);
         // Value
         setColor(COLORS.primary, 'text');
-        doc.text(String(v), pw - M.right, ctx.y + lh - 2, { align: 'right' });
+        doc.text(clean(String(v)), pw - M.right, ctx.y + lh - 2, { align: 'right' });
         ctx.y += lh;
         // Bar
         const barH = 5;
@@ -607,7 +642,7 @@ async function generatePdf(opts: GenOpts) {
           setColor(COLORS.text, 'text');
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9.5);
-          doc.text(cells.join('   ·   '), M.left, ctx.y + lh - 2);
+          doc.text(clean(cells.join('   -   ')), M.left, ctx.y + lh - 2);
           ctx.y += lh + 2;
         },
       });
@@ -617,7 +652,7 @@ async function generatePdf(opts: GenOpts) {
   // ============ TRANSCRIPT ============
   if (opts.sections.transcript && opts.transcript?.length) {
     sectionTitle('Interview-Transkript');
-    muted(`Vollständiger Gesprächsverlauf · ${opts.transcript.length} Nachrichten`);
+    muted(`Vollständiger Gesprächsverlauf - ${opts.transcript.length} Nachrichten`);
     ctx.y += 8;
 
     opts.transcript.forEach((msg) => {
@@ -635,7 +670,7 @@ async function generatePdf(opts: GenOpts) {
       setColor(COLORS.muted, 'text');
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
-      doc.text(ts, pw - M.right, ctx.y + 8, { align: 'right' });
+      doc.text(clean(ts), pw - M.right, ctx.y + 8, { align: 'right' });
       ctx.y += 14;
 
       // Message
