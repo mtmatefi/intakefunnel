@@ -652,7 +652,7 @@ async function generatePdf(opts: GenOpts) {
   // ============ TRANSCRIPT ============
   if (opts.sections.transcript && opts.transcript?.length) {
     sectionTitle('Interview-Transkript');
-    muted(`Vollstaendiger Gespraechsverlauf - ${opts.transcript.length} Nachrichten`);
+    muted(`Vollständiger Gesprächsverlauf - ${opts.transcript.length} Nachrichten`);
     ctx.y += 8;
 
     opts.transcript.forEach((msg) => {
