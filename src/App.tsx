@@ -82,6 +82,7 @@ function AppRoutes() {
         <Route path="/workspace" element={<WorkspaceRoute><WorkspaceSelect /></WorkspaceRoute>} />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/intakes" element={<ProtectedRoute><IntakesPage /></ProtectedRoute>} />
         <Route path="/intake/new" element={<ProtectedRoute><NewIntakePage /></ProtectedRoute>} />
         <Route path="/intake/:id" element={<ProtectedRoute><IntakeDetailPage /></ProtectedRoute>} />
         <Route path="/architect" element={<ProtectedRoute><ArchitectQueuePage /></ProtectedRoute>} />
