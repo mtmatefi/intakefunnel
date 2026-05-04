@@ -321,13 +321,14 @@ async function generatePdf(opts: GenOpts) {
   };
 
   const badge = (label: string, x: number, y: number, color: readonly number[]): number => {
+    const c = clean(label);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    const w = doc.getTextWidth(label) + 12;
+    const w = doc.getTextWidth(c) + 12;
     setColor(color, 'fill');
     doc.roundedRect(x, y - 9, w, 13, 3, 3, 'F');
     setColor(COLORS.white, 'text');
-    doc.text(label, x + 6, y);
+    doc.text(c, x + 6, y);
     return w;
   };
 
