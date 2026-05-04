@@ -642,7 +642,7 @@ async function generatePdf(opts: GenOpts) {
           setColor(COLORS.text, 'text');
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9.5);
-          doc.text(cells.join('   ·   '), M.left, ctx.y + lh - 2);
+          doc.text(clean(cells.join('   -   ')), M.left, ctx.y + lh - 2);
           ctx.y += lh + 2;
         },
       });
