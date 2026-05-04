@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { SpecAmendmentDialog } from '@/components/spec/SpecAmendmentDialog';
 import { FollowupDialog } from '@/components/spec/FollowupDialog';
 import { JiraSyncPanel } from '@/components/jira/JiraSyncPanel';
