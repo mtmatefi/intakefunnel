@@ -157,6 +157,13 @@ export default function IntakeDetailPage() {
           </div>
           
           <div className="flex gap-2 flex-wrap">
+            <PdfExportDialog
+              intakeTitle={intake.title}
+              jpdKey={intake.jpd_issue_key}
+              spec={spec}
+              routing={routing}
+              transcript={transcript}
+            />
             {/* Follow-up button for architects */}
             {canEditSpec && id && (
               <FollowupDialog intakeId={id} intakeTitle={intake.title} />
