@@ -36,6 +36,7 @@ import {
   Building2,
   Link2,
   Lightbulb,
+  Inbox,
 } from "lucide-react";
 import type { UserRole } from "@/types/intake";
 
