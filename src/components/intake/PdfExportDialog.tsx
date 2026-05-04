@@ -241,7 +241,9 @@ async function generatePdf(opts: GenOpts) {
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
     doc.setFontSize(size);
     setColor(color, 'text');
-    const lines = doc.splitTextToSize(String(str ?? ''), maxWidth);
+    const cleaned = clean(str);
+    if (!cleaned) return;
+    const lines = doc.splitTextToSize(cleaned, maxWidth);
     const lh = size * 1.25;
     for (const line of lines) {
       ensure(lh + lineGap);
@@ -251,15 +253,14 @@ async function generatePdf(opts: GenOpts) {
   };
 
   const sectionTitle = (label: string) => {
-    ctx.sectionLabel = label;
+    ctx.sectionLabel = clean(label);
     newPage();
-    // Big section header block
     setColor(COLORS.primary, 'fill');
     doc.rect(M.left, ctx.y, 4, 28, 'F');
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
-    doc.text(label, M.left + 14, ctx.y + 20);
+    doc.text(clean(label), M.left + 14, ctx.y + 20);
     ctx.y += 38;
   };
 
@@ -269,7 +270,7 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.primaryDark, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
-    doc.text(label, M.left, ctx.y + 12);
+    doc.text(clean(label), M.left, ctx.y + 12);
     ctx.y += 16;
     setColor(COLORS.primary, 'draw');
     doc.setLineWidth(0.8);
@@ -283,30 +284,34 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.text, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text(label, M.left, ctx.y + 10);
+    doc.text(clean(label), M.left, ctx.y + 10);
     ctx.y += 14;
   };
 
   const paragraph = (str: string) => {
-    if (!str) return;
-    text(str, { size: 10, color: COLORS.text, lineGap: 3 });
+    const c = clean(str);
+    if (!c) return;
+    text(c, { size: 10, color: COLORS.text, lineGap: 3 });
   };
 
   const muted = (str: string) => {
-    if (!str) return;
-    text(str, { size: 9, color: COLORS.muted, lineGap: 2 });
+    const c = clean(str);
+    if (!c) return;
+    text(c, { size: 9, color: COLORS.muted, lineGap: 2 });
   };
 
   const bullet = (str: string) => {
+    const c = clean(str);
+    if (!c) return;
     const indent = 14;
     const bulletX = M.left + 4;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     setColor(COLORS.primary, 'text');
-    const lines = doc.splitTextToSize(str, contentW - indent);
+    const lines = doc.splitTextToSize(c, contentW - indent);
     const lh = 10 * 1.3;
     ensure(lh + 3);
-    doc.text('•', bulletX, ctx.y + lh - 2);
+    doc.text('-', bulletX, ctx.y + lh - 2);
     setColor(COLORS.text, 'text');
     for (let i = 0; i < lines.length; i++) {
       if (i > 0) ensure(lh + 2);
