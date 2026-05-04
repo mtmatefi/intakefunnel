@@ -393,7 +393,7 @@ async function generatePdf(opts: GenOpts) {
   setColor(COLORS.text, 'text');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(26);
-  const titleLines = doc.splitTextToSize(opts.intakeTitle, contentW);
+  const titleLines = doc.splitTextToSize(clean(opts.intakeTitle), contentW);
   for (const line of titleLines) {
     ensure(32);
     doc.text(line, M.left, ctx.y + 22);
@@ -404,7 +404,7 @@ async function generatePdf(opts: GenOpts) {
     setColor(COLORS.primary, 'text');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text(opts.jpdKey, M.left, ctx.y + 14);
+    doc.text(clean(opts.jpdKey), M.left, ctx.y + 14);
     ctx.y += 22;
   }
 
